@@ -34,7 +34,7 @@ export interface CompletionResponse {
 export interface LLMProvider {
   readonly name: string;
   complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse>;
-  completeStream?(messages: Message[], onChunk: (chunk: string) => void): Promise<CompletionResponse>;
+  completeStream?(messages: Message[], onChunk: (chunk: string) => void, options?: CompletionOptions): Promise<CompletionResponse>;
   countTokens(messages: Message[]): Promise<number>;
   getAvailableModels(): Promise<string[]>;
   validateConfig?(): Promise<boolean>;
