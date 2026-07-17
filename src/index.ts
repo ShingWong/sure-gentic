@@ -13,6 +13,8 @@ export type {
   Message,
   MessageRole,
   CompletionOptions,
+  CompletionResponse,
+  CompletionUsage,
   Skill,
   SkillResult,
   AgentContext,

@@ -17,7 +17,10 @@ export class Agent {
     registerBuiltinTools();
     this.factory = LLMProviderFactory.getInstance();
     const config = loadConfig();
-    const resolvedProvider = provider || this.factory.initializeFromEnv(config.provider);
+    const resolvedProvider = provider || this.factory.initializeFromEnv().defaultProvider;
+    if (!resolvedProvider) {
+      throw new Error('No LLM provider available. Set OPENAI_API_KEY or ANTHROPIC_API_KEY, or use mock provider.');
+    }
     this.context = {
       provider: resolvedProvider,
       model: config.model || DEFAULT_MODELS[resolvedProvider.name] || '',
