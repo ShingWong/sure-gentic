@@ -38,3 +38,5 @@ export interface SkillResult {
 }
 
 export type ProviderType = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mock';
+
+export type { ToolDefinition, ToolParameter, ToolHandler, ToolContext, ToolExecutionResult } from './tools/types';

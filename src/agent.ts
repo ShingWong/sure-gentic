@@ -1,6 +1,7 @@
 import type { LLMProvider, AgentContext, Skill, SkillResult } from './types';
 import { LLMProviderFactory } from './providers/factory';
 import { loadConfig } from './config';
+import { registerBuiltinTools } from './tools/builtin';
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-4o',
@@ -13,6 +14,7 @@ export class Agent {
   public readonly factory: LLMProviderFactory;
 
   constructor(provider?: LLMProvider) {
+    registerBuiltinTools();
     this.factory = LLMProviderFactory.getInstance();
     const config = loadConfig();
     const resolvedProvider = provider || this.factory.initializeFromEnv(config.provider);
