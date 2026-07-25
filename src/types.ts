@@ -58,6 +58,6 @@ export interface SkillResult {
   error?: string;
 }
 
-export type ProviderType = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mock';
+export type ProviderType = 'openai' | 'anthropic' | 'google' | 'openai-compatible' | 'ollama' | 'mock';
 
 export type { ToolDefinition, ToolParameter, ToolHandler, ToolContext, ToolExecutionResult } from './tools/types';

@@ -2,6 +2,8 @@ export { Agent } from './agent';
 export { LLMProviderFactory } from './providers/factory';
 export { OpenAIProvider } from './providers/openai';
 export { AnthropicProvider } from './providers/anthropic';
+export { GoogleProvider } from './providers/google';
+export { OpenAICompatibleProvider } from './providers/openai-compatible';
 export { MockProvider } from './providers/mock';
 export { BaseSkill } from './skills/skill';
 export { loadConfig } from './config';

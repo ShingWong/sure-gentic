@@ -1,9 +1,11 @@
 import type { LLMProvider, ProviderType } from '../types';
 import { OpenAIProvider } from './openai';
 import { AnthropicProvider } from './anthropic';
+import { GoogleProvider } from './google';
+import { OpenAICompatibleProvider } from './openai-compatible';
 import { MockProvider } from './mock';
 
-const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'mock'];
+const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'openai-compatible', 'mock'];
 
 export class LLMProviderFactory {
   private static instance: LLMProviderFactory;
@@ -41,7 +43,7 @@ export class LLMProviderFactory {
   initializeFromEnv(): { registered: string[]; defaultProvider: LLMProvider | undefined } {
     const registered: string[] = [];
 
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY && !process.env.VISION_BASE_URL) {
       const p = new OpenAIProvider();
       this.register(p);
       registered.push('openai');
@@ -50,6 +52,19 @@ export class LLMProviderFactory {
       const p = new AnthropicProvider();
       this.register(p);
       registered.push('anthropic');
+    }
+    if (process.env.GOOGLE_API_KEY) {
+      const p = new GoogleProvider();
+      this.register(p);
+      registered.push('google');
+    }
+    if (process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL) {
+      const p = new OpenAICompatibleProvider({
+        baseURL: process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL,
+        apiKey: process.env.VISION_API_KEY || process.env.OPENAI_API_KEY,
+      });
+      this.register(p);
+      registered.push('openai-compatible');
     }
 
     const hasReal = registered.length > 0;
