@@ -246,6 +246,53 @@ await provider.completeStream(
 | `ToolHandler` | `(params, context) => Promise<unknown>` |
 | `ToolExecutionResult` | `{ success, result?, error?, executionTime }` |
 
+## AI Agent Integration
+
+AI coding assistants (OpenCode, Claude Code, Cursor, VS Code Copilot) can use sure-gentic to scaffold agents, create skills, and wire up tools. Here's how to prompt them:
+
+### Scaffold a new agent
+
+```
+Using sure-gentic, create an agent that can research topics and summarize them.
+Create a `ResearchSkill` that takes a query, uses the web_search tool to find
+results, then calls the LLM to summarize findings.
+```
+
+### Create a custom skill
+
+```
+Create a new skill at src/skills/sentiment.ts that analyzes the sentiment of
+text. It should extend BaseSkill<string, string>, call the LLM with a
+sentiment analysis prompt, and return "positive", "negative", or "neutral".
+```
+
+### Register a custom tool
+
+```
+Create a weather tool using the sure-gentic ToolRegistryService. It should
+take a city name, fetch weather from an API, and register itself so skills
+can use it.
+```
+
+### What AI agents should know
+
+| File | What it tells the AI |
+|------|---------------------|
+| `src/types.ts` | Core interfaces: `LLMProvider`, `Message`, `Skill`, `AgentContext`, `ToolDefinition` |
+| `src/agent.ts` | `Agent` class — orchestrates providers, skills, and tools |
+| `src/skills/skill.ts` | `BaseSkill` abstract class — how to create new skills |
+| `src/tools/registry.ts` | `ToolRegistryService` — how tools are registered and executed |
+| `src/tools/builtin.ts` | Built-in tool examples (calculator, web_search, current_time) |
+| `src/providers/factory.ts` | `LLMProviderFactory` — how providers are discovered from env |
+
+### Example: AI-generated agent workflow
+
+1. Read `src/types.ts` → understand `Skill`, `AgentContext`, `ToolDefinition` interfaces
+2. Read `src/skills/skill.ts` → understand `BaseSkill` contract
+3. Create a new skill file extending `BaseSkill`
+4. Register any needed tools via `ToolRegistryService`
+5. Instantiate `Agent` and call `agent.run(skill, context)`
+
 ## Development
 
 ```bash
