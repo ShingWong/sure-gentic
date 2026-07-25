@@ -1,6 +1,6 @@
 # sure-gentic
 
-Provider-agnostic AI agent framework with skill-based architecture, streaming, and a plugin tool system. Write skills once, run them against OpenAI, Anthropic, or any LLM backend.
+**Write AI skills once. Run them anywhere.** sure-gentic is a lightweight, provider-agnostic AI agent framework. Define your agent's capabilities as modular **Skills**, then swap between OpenAI, Anthropic, or any LLM backend with a single environment variable — no code changes, no lock-in.
 
 ```ts
 import { Agent, BaseSkill } from 'sure-gentic'
@@ -19,6 +19,27 @@ class Summarizer extends BaseSkill<string, string> {
 const agent = new Agent()
 const result = await agent.run(new Summarizer(), 'Long text here...')
 ```
+
+### Why sure-gentic?
+
+| Problem | How sure-gentic solves it |
+|---------|--------------------------|
+| **Provider lock-in** | Skill code never references a specific model or provider. Swap from GPT-4o to Claude by changing `AI_PROVIDER`. |
+| **Scattered tool integration** | Built-in tool registry with validation, schemas, and execution lifecycle. Add tools once, use them from any skill. |
+| **No standard skill pattern** | `BaseSkill` gives you a consistent interface: `name`, `description`, `execute()`. All skills look the same, all skills compose the same way. |
+| **Context bloat** | Minimal core (~800 lines). No heavy abstractions, no orchestrator chains, no vector store dependencies. Add only what you need. |
+| **Fragmented streaming** | Unified `completeStream()` across providers — same interface for OpenAI and Anthropic streaming. |
+
+### How it compares
+
+| | sure-gentic | LangChain | Vercel AI SDK |
+|---|---|---|---|
+| Provider-agnostic | ✅ Yes — env var swap | ✅ Yes | ✅ Yes |
+| Skill architecture | ✅ First-class `BaseSkill` | ❌ No standard pattern | ❌ No skill abstraction |
+| Tool system | ✅ Built-in with validation | ✅ Yes | ❌ External only |
+| Bundle size | ~800 lines core | ~50K+ lines | ~10K+ lines |
+| Peer deps | 3 (all optional) | 15+ required | 5+ required |
+| Learning curve | Low — 3 concepts (Skill, Agent, Tool) | High — chains, agents, retrievers, memory | Medium — streams, tools, providers |
 
 ## Installation
 
