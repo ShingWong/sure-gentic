@@ -1,6 +1,6 @@
 # sure-gentic
 
-**Write AI skills once. Run them anywhere.** sure-gentic is a lightweight, provider-agnostic AI agent framework. Define your agent's capabilities as modular **Skills**, then swap between OpenAI, Anthropic, or any LLM backend with a single environment variable — no code changes, no lock-in.
+**A portable agent creation framework.** Build AI agents with composable **skills** and pluggable **tools**, then run them against OpenAI, Anthropic, or any LLM backend — swap providers with a single environment variable, no code changes, no lock-in.
 
 ```ts
 import { Agent, BaseSkill } from 'sure-gentic'
@@ -24,9 +24,9 @@ const result = await agent.run(new Summarizer(), 'Long text here...')
 
 | Problem | How sure-gentic solves it |
 |---------|--------------------------|
-| **Provider lock-in** | Skill code never references a specific model or provider. Swap from GPT-4o to Claude by changing `AI_PROVIDER`. |
-| **Scattered tool integration** | Built-in tool registry with validation, schemas, and execution lifecycle. Add tools once, use them from any skill. |
-| **No standard skill pattern** | `BaseSkill` gives you a consistent interface: `name`, `description`, `execute()`. All skills look the same, all skills compose the same way. |
+| **Provider lock-in** | Agent code never references a specific model or provider. Swap from GPT-4o to Claude by changing `AI_PROVIDER`. |
+| **No standard agent pattern** | Agent + Skills + Tools — three clear concepts. Skills encapsulate LLM-powered tasks; Tools provide reusable capabilities. Compose them however you need. |
+| **Scattered tool integration** | Built-in `ToolRegistryService` with parameter validation, schemas, and execution lifecycle. Register a tool once, call it from any skill or directly. |
 | **Context bloat** | Minimal core (~800 lines). No heavy abstractions, no orchestrator chains, no vector store dependencies. Add only what you need. |
 | **Fragmented streaming** | Unified `completeStream()` across providers — same interface for OpenAI and Anthropic streaming. |
 
@@ -34,12 +34,14 @@ const result = await agent.run(new Summarizer(), 'Long text here...')
 
 | | sure-gentic | LangChain | Vercel AI SDK |
 |---|---|---|---|
-| Provider-agnostic | ✅ Yes — env var swap | ✅ Yes | ✅ Yes |
-| Skill architecture | ✅ First-class `BaseSkill` | ❌ No standard pattern | ❌ No skill abstraction |
-| Tool system | ✅ Built-in with validation | ✅ Yes | ❌ External only |
+| Provider-agnostic | ✅ Env var swap | ✅ Yes | ✅ Yes |
+| Agent architecture | ✅ Agent + Skills + Tools | ❌ Chains + Agents + Memory | ⚠️ Only AI SDK calls |
+| Skill system | ✅ First-class `BaseSkill` | ❌ No standard pattern | ❌ No skill abstraction |
+| Tool system | ✅ Built-in registry + validation | ✅ Yes | ❌ External only |
 | Bundle size | ~800 lines core | ~50K+ lines | ~10K+ lines |
 | Peer deps | 3 (all optional) | 15+ required | 5+ required |
-| Learning curve | Low — 3 concepts (Skill, Agent, Tool) | High — chains, agents, retrievers, memory | Medium — streams, tools, providers |
+| Learning curve | Low — 3 concepts | High — chains, agents, retrievers, memory | Medium — streams, tools, providers |
+| Framework lock-in | Zero — plain TypeScript classes | Tight — chains and callbacks | Tight — provider SDK wrappers |
 
 ## Installation
 
@@ -80,54 +82,25 @@ The factory auto-discovers providers from environment variables. If no keys are 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│  Agent                                       │
-│  ┌──────────┐  ┌──────────┐  ┌────────────┐ │
-│  │ Provider │  │   Tool   │  │   Skills   │ │
-│  │ Factory  │  │ Registry │  │ (User-Def) │ │
-│  └────┬─────┘  └────┬─────┘  └──────┬─────┘ │
-│       │              │               │       │
-│  ┌────▼─────┐  ┌────▼─────┐  ┌──────▼─────┐ │
-│  │ OpenAI   │  │ web_     │  │ Custom     │ │
-│  │ Anthropic│  │ search   │  │ Skills     │ │
-│  │ Mock     │  │ calc     │  │ extend     │ │
-│  │          │  │ time     │  │ BaseSkill  │ │
-│  └──────────┘  └──────────┘  └────────────┘ │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  Agent                                        │
+│  ┌─────────────┐   ┌─────────────┐           │
+│  │   Skills    │   │    Tools    │           │
+│  │  (tasks)    │   │ (capabil.)  │           │
+│  └──────┬──────┘   └──────┬──────┘           │
+│         │                 │                  │
+│  ┌──────▼──────────────────▼──────┐          │
+│  │       LLM Provider Layer       │          │
+│  │  ┌──────┐ ┌────────┐ ┌──────┐  │          │
+│  │  │OpenAI│ │Anthrop.│ │ Mock │  │          │
+│  │  └──────┘ └────────┘ └──────┘  │          │
+│  └────────────────────────────────┘          │
+└──────────────────────────────────────────────┘
 ```
-
-## Skills
-
-Skills are the core unit of work. Extend `BaseSkill<TContext, TResult>` and implement `name`, `description`, and `execute()`:
-
-```ts
-import { BaseSkill } from 'sure-gentic'
-
-class Translator extends BaseSkill<{ text: string; lang: string }, string> {
-  name = 'translator'
-  description = 'Translates text to a target language'
-
-  async execute(context: { text: string; lang: string }): Promise<string> {
-    return this.callLLM(this.agent, [
-      { role: 'system', content: `You are a translator. Translate to ${context.lang}.` },
-      { role: 'user', content: context.text },
-    ])
-  }
-}
-
-const result = await agent.run(new Translator(), { text: 'Hello', lang: 'French' })
-// → { success: true, data: "Bonjour" }
-```
-
-### BaseSkill Helpers
-
-| Method | Purpose |
-|--------|---------|
-| `callLLM(agentContext, messages)` | Calls the provider's `complete()` and returns content string |
-| `success(data)` | Wraps result in `{ success: true, data }` |
-| `error(message)` | Wraps error in `{ success: false, error }` |
 
 ## Agent
+
+The `Agent` is the central orchestrator. It wires together an LLM provider, a tool registry, and executes skills.
 
 ```ts
 const agent = new Agent()                              // auto-discovers provider from env
@@ -151,9 +124,41 @@ if (result.success) {
 }
 ```
 
+## Skills
+
+Skills encapsulate LLM-powered tasks. Extend `BaseSkill<TContext, TResult>` with `name`, `description`, and `execute()`:
+
+```ts
+import { BaseSkill } from 'sure-gentic'
+
+class Translator extends BaseSkill<{ text: string; lang: string }, string> {
+  name = 'translator'
+  description = 'Translates text to a target language'
+
+  async execute(context: { text: string; lang: string }): Promise<string> {
+    return this.callLLM(this.agent, [
+      { role: 'system', content: `You are a translator. Translate to ${context.lang}.` },
+      { role: 'user', content: context.text },
+    ])
+  }
+}
+
+const agent = new Agent()
+const result = await agent.run(new Translator(), { text: 'Hello', lang: 'French' })
+// → { success: true, data: "Bonjour" }
+```
+
+### BaseSkill Helpers
+
+| Method | Purpose |
+|--------|---------|
+| `callLLM(agentContext, messages)` | Calls the provider's `complete()` and returns content string |
+| `success(data)` | Wraps result in `{ success: true, data }` |
+| `error(message)` | Wraps error in `{ success: false, error }` |
+
 ## Tools
 
-Built-in tools registered on every Agent:
+Built-in tools are registered on every `Agent` automatically. They provide reusable capabilities that any skill can use:
 
 | Tool | Purpose | Parameters |
 |------|---------|------------|
