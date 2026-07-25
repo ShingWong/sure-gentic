@@ -52,7 +52,9 @@ export class ToolRegistryService {
       const result = await handler(validation.validatedParams, { ...context, metadata: context.metadata || {} });
       return { success: true, result, executionTime: Date.now() - start };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err), executionTime: Date.now() - start };
+      const msg = err instanceof Error ? err.message : String(err);
+      const safe = msg.replace(/(sk-[a-zA-Z0-9]{10,}|AIza[0-9A-Za-z_-]{35}|ant-api[0-9a-f]{32})/g, '[API KEY REDACTED]');
+      return { success: false, error: safe, executionTime: Date.now() - start };
     }
   }
 

@@ -2,29 +2,31 @@ import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from
 
 export class AnthropicProvider implements LLMProvider {
   readonly name = 'anthropic';
-  private client: any = null;
+  private clientReady: Promise<any>;
+  private defaultModel: string;
 
-  constructor(apiKey?: string, private defaultModel = 'claude-sonnet-4-20250514') {
+  constructor(apiKey?: string, defaultModel = 'claude-sonnet-4-20250514') {
+    this.defaultModel = defaultModel;
     const key = apiKey || process.env.ANTHROPIC_API_KEY;
-    if (key) {
-      import('@anthropic-ai/sdk').then((mod) => {
-        this.client = new mod.default({ apiKey: key });
-      });
-    }
+    this.clientReady = (async () => {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      return new Anthropic({ apiKey: key });
+    })();
+  }
+
+  private async client(): Promise<any> {
+    return await this.clientReady;
   }
 
   async complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
-    if (!this.client) {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    }
+    const c = await this.client();
     const model = options?.model || this.defaultModel;
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
 
-    const response = await this.client.messages.create({
+    const response = await c.messages.create({
       model,
       system: systemMsg?.content,
       messages: chatMessages,
@@ -50,17 +52,14 @@ export class AnthropicProvider implements LLMProvider {
     onChunk: (chunk: string) => void,
     options?: CompletionOptions
   ): Promise<CompletionResponse> {
-    if (!this.client) {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    }
+    const c = await this.client();
     const model = options?.model || this.defaultModel;
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
 
-    const stream = await this.client.messages.create({
+    const stream = await c.messages.create({
       model,
       system: systemMsg?.content,
       messages: chatMessages,

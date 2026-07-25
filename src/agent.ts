@@ -34,7 +34,8 @@ export class Agent {
       return { success: true, data: result };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: message };
+      const sanitized = message.replace(/(sk-[a-zA-Z0-9]{10,}|AIza[0-9A-Za-z_-]{35}|ant-api[0-9a-f]{32})/g, '[API KEY REDACTED]');
+      return { success: false, error: sanitized };
     }
   }
 }

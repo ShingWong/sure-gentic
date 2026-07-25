@@ -1,5 +1,5 @@
 {
-  "name": "lexagentic",
+  "name": "sure-gentic",
   "version": "0.1.0",
   "description": "Provider-agnostic AI agent framework with skill-based architecture",
   "type": "module",

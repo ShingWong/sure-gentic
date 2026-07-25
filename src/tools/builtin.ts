@@ -8,6 +8,8 @@ async function webSearchHandler(params: Record<string, unknown>, _context: ToolC
 
   if (searchApiKey) {
     try {
+      // Note: SerpAPI only supports api_key as URL query param (no Authorization header).
+      // The key appears in server access logs — restrict log access in production.
       const url = `https://serpapi.com/search?api_key=${searchApiKey}&q=${encodeURIComponent(query)}&num=${maxResults}`;
       const res = await fetch(url);
       const data = await res.json() as { organic_results?: { title: string; snippet: string; link: string }[] };
@@ -28,14 +30,78 @@ async function webSearchHandler(params: Record<string, unknown>, _context: ToolC
   }));
 }
 
+function safeEval(expr: string): number {
+  let pos = 0
+  function peek(): string { return expr[pos] ?? '' }
+  function next(): string { return expr[pos++] ?? '' }
+  function skipSpace() { while (/\s/.test(peek())) pos++ }
+  function parseError(msg: string): never { throw new Error(`Invalid expression: ${msg} at position ${pos}`) }
+
+  function parseNumber(): number {
+    skipSpace()
+    let num = ''
+    if (peek() === '-') { num += next() }
+    while (/[0-9.]/.test(peek())) num += next()
+    if (!num || num === '-') parseError('Expected number')
+    return parseFloat(num)
+  }
+
+  function parseFactor(): number {
+    skipSpace()
+    if (peek() === '(') {
+      next()
+      const val = parseExpr()
+      skipSpace()
+      if (next() !== ')') parseError('Expected )')
+      return val
+    }
+    return parseNumber()
+  }
+
+  function parseTerm(): number {
+    let left = parseFactor()
+    skipSpace()
+    while (peek() === '*' || peek() === '/') {
+      const op = next()
+      const right = parseFactor()
+      if (op === '*') left *= right
+      else {
+        if (right === 0) parseError('Division by zero')
+        left /= right
+      }
+      skipSpace()
+    }
+    return left
+  }
+
+  function parseExpr(): number {
+    let left = parseTerm()
+    skipSpace()
+    while (peek() === '+' || peek() === '-') {
+      const op = next()
+      const right = parseTerm()
+      left = op === '+' ? left + right : left - right
+      skipSpace()
+    }
+    return left
+  }
+
+  skipSpace()
+  const result = parseExpr()
+  skipSpace()
+  if (pos < expr.length) parseError(`Unexpected character '${peek()}'`)
+  return result
+}
+
 async function calculatorHandler(params: Record<string, unknown>): Promise<unknown> {
-  const expression = params.expression as string;
-  const sanitized = expression.replace(/[^0-9+\-*/().%\s]/g, '');
+  const expression = String(params.expression ?? '')
+  const sanitized = expression.replace(/[^0-9+\-*/().%\s]/g, '')
+  if (!/[\d]/.test(sanitized)) throw new Error('Invalid expression: no digits found')
   try {
-    const result = new Function(`"use strict"; return (${sanitized})`)();
-    return { expression, result, formatted: String(result) };
-  } catch {
-    throw new Error(`Invalid expression: ${expression}`);
+    const result = safeEval(sanitized)
+    return { expression, result, formatted: String(result) }
+  } catch (e) {
+    throw new Error(`Invalid expression: ${expression}`)
   }
 }
 
@@ -82,7 +148,11 @@ const currentTimeDef: ToolDefinition = {
   category: 'utility', isActive: true,
 };
 
+let toolsRegistered = false;
+
 export function registerBuiltinTools(): void {
+  if (toolsRegistered) return;
+  toolsRegistered = true;
   const registry = ToolRegistryService.getInstance();
   registry.register(webSearchDef, webSearchHandler);
   registry.register(calculatorDef, calculatorHandler);

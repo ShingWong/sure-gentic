@@ -5,11 +5,11 @@ Provider-agnostic AI agent framework with skill-based architecture.
 ## Quick Start
 
 ```bash
-npm install lexagentic
+npm install sure-gentic
 ```
 
 ```typescript
-import { Agent, BaseSkill } from 'lexagentic';
+import { Agent, BaseSkill } from 'sure-gentic';
 
 // Define a skill
 class GreetSkill extends BaseSkill<{ name: string }, string> {

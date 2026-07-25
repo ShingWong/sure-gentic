@@ -53,7 +53,7 @@ export class LLMProviderFactory {
     }
 
     const hasReal = registered.length > 0;
-    if (!hasReal && process.env.NODE_ENV !== 'production') {
+    if (!hasReal && (process.env.AI_PROVIDER === 'mock' || process.env.NODE_ENV === 'test')) {
       const mock = new MockProvider();
       this.register(mock);
       registered.push('mock');

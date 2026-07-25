@@ -2,24 +2,26 @@ import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from
 
 export class OpenAIProvider implements LLMProvider {
   readonly name = 'openai';
-  private client: any = null;
+  private clientReady: Promise<any>;
+  private defaultModel: string;
 
-  constructor(apiKey?: string, private defaultModel = 'gpt-4o') {
+  constructor(apiKey?: string, defaultModel = 'gpt-4o') {
+    this.defaultModel = defaultModel;
     const key = apiKey || process.env.OPENAI_API_KEY;
-    if (key) {
-      import('openai').then((mod) => {
-        this.client = new mod.default({ apiKey: key });
-      });
-    }
+    this.clientReady = (async () => {
+      const { default: OpenAI } = await import('openai');
+      return new OpenAI({ apiKey: key });
+    })();
+  }
+
+  private async client(): Promise<any> {
+    return await this.clientReady;
   }
 
   async complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
-    if (!this.client) {
-      const { default: OpenAI } = await import('openai');
-      this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    }
+    const c = await this.client();
     const model = options?.model || this.defaultModel;
-    const response = await this.client.chat.completions.create({
+    const response = await c.chat.completions.create({
       model,
       messages,
       temperature: options?.temperature ?? 0.7,
@@ -49,12 +51,9 @@ export class OpenAIProvider implements LLMProvider {
     onChunk: (chunk: string) => void,
     options?: CompletionOptions
   ): Promise<CompletionResponse> {
-    if (!this.client) {
-      const { default: OpenAI } = await import('openai');
-      this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    }
+    const c = await this.client();
     const model = options?.model || this.defaultModel;
-    const stream = await this.client.chat.completions.create({
+    const stream = await c.chat.completions.create({
       model,
       messages,
       stream: true,

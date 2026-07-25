@@ -1,6 +1,6 @@
 import type { ProviderType } from './types';
 
-export interface LexagenticConfig {
+export interface SureGenticConfig {
   provider?: ProviderType;
   apiKey?: string;
   model?: string;
@@ -8,7 +8,7 @@ export interface LexagenticConfig {
   ollamaBaseUrl: string;
 }
 
-export function loadConfig(): LexagenticConfig {
+export function loadConfig(): SureGenticConfig {
   return {
     provider: (process.env.AI_PROVIDER as ProviderType) || undefined,
     apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_GEMINI_API_KEY,
