@@ -102,10 +102,13 @@ export class OpenRouterProvider implements LLMProvider {
   private _defaultModels(): string[] {
     return [
       'openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-4-turbo',
-      'anthropic/claude-sonnet-4-20250514', 'anthropic/claude-3.5-haiku',
-      'google/gemini-2.5-flash-lite', 'google/gemini-2.5-pro',
-      'meta-llama/llama-3.3-70b-instruct', 'meta-llama/llama-3.2-11b-vision',
-      'qwen/qwen3.6-plus', 'mistralai/mistral-7b-instruct',
+      'anthropic/claude-sonnet-4-20250514', 'anthropic/claude-3.5-haiku', 'anthropic/claude-opus-4-20250514',
+      'google/gemini-2.5-flash-lite', 'google/gemini-2.5-flash', 'google/gemini-2.5-pro',
+      'meta-llama/llama-3.3-70b-instruct', 'meta-llama/llama-3.2-90b-vision',
+      'qwen/qwen3.6-plus', 'qwen/qwen3.5-plus', 'qwen/qwen-2.5-72b-instruct',
+      'mistralai/mistral-7b-instruct', 'mistralai/mistral-large',
+      'deepseek/deepseek-r1', 'deepseek/deepseek-chat',
+      'cohere/command-r-plus',
     ]
   }
 
