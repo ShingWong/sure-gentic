@@ -28,10 +28,11 @@ export class GoogleVertexProvider implements LLMProvider {
 
     this.clientReady = (async () => {
       try {
-        // @ts-expect-error
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        // @ts-ignore
+const { GoogleGenerativeAI } = await import('@google/generative-ai');
         // Vertex uses Application Default Credentials (ADC) — no API key passed
-        return new GoogleGenerativeAI('vertex-auth-token', { baseUrl });
+        process.env.GOOGLE_API_BASE_URL = baseUrl;
+        return new GoogleGenerativeAI('vertex-auth-token');
       } catch {
         throw new Error('npm install @google/generative-ai. Set GOOGLE_VERTEX_PROJECT and GCLOUD_PROJECT, or use ADC.');
       }
@@ -88,7 +89,21 @@ export class GoogleVertexProvider implements LLMProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'];
+    const project = process.env.GOOGLE_VERTEX_PROJECT || process.env.GCLOUD_PROJECT || '';
+    const location = process.env.GOOGLE_VERTEX_LOCATION || 'us-central1';
+    if (project) {
+      try {
+        const res = await fetch(`https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models`, {
+          headers: { 'Authorization': 'Bearer ' + (process.env.GOOGLE_VERTEX_KEY || '') },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return (data.models || []).filter((m: any) => m.name.includes('gemini-')).map((m: any) => m.name.split('/').pop()).sort();
+        }
+      } catch {}
+    }
+    return ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
   }
 
   async validateConfig(): Promise<boolean> {

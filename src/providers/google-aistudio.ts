@@ -25,8 +25,8 @@ export class GoogleAIStudioProvider implements LLMProvider {
     const key = apiKey || process.env.GOOGLE_API_KEY || process.env.VISION_API_KEY || '';
     this.clientReady = (async () => {
       try {
-        // @ts-expect-error
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        // @ts-ignore
+const { GoogleGenerativeAI } = await import('@google/generative-ai');
         return new GoogleGenerativeAI(key);
       } catch {
         throw new Error('npm install @google/generative-ai. Get a key at aistudio.google.com → API Keys → Create Key.');
@@ -86,7 +86,20 @@ export class GoogleAIStudioProvider implements LLMProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'];
+    const key = process.env.GOOGLE_API_KEY || process.env.VISION_API_KEY;
+    if (key) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${key}`, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          const data = await res.json();
+          return (data.models || [])
+            .filter((m: any) => m.name.startsWith('models/gemini-') && m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m: any) => m.name.replace('models/', ''))
+            .sort();
+        }
+      } catch {}
+    }
+    return ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
   }
 
   async validateConfig(): Promise<boolean> {
