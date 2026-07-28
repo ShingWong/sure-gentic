@@ -1,8 +1,20 @@
 export type MessageRole = 'system' | 'user' | 'assistant';
 
+export interface ImageContent {
+  type: 'image_url';
+  image_url: { url: string };  // data:image/png;base64,... or https://...
+}
+
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
+export type ContentPart = TextContent | ImageContent;
+
 export interface Message {
   role: MessageRole;
-  content: string;
+  content: string | ContentPart[];
   name?: string;
 }
 
