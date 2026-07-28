@@ -3,9 +3,10 @@ import { OpenAIProvider } from './openai';
 import { AnthropicProvider } from './anthropic';
 import { GoogleProvider } from './google';
 import { OpenAICompatibleProvider } from './openai-compatible';
+import { OpenRouterProvider } from './openrouter';
 import { MockProvider } from './mock';
 
-const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'openai-compatible', 'mock'];
+const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'openai-compatible', 'openrouter', 'mock'];
 
 export class LLMProviderFactory {
   private static instance: LLMProviderFactory;
@@ -65,6 +66,11 @@ export class LLMProviderFactory {
       });
       this.register(p);
       registered.push('openai-compatible');
+    }
+    if (process.env.OPENROUTER_API_KEY) {
+      const p = new OpenRouterProvider();
+      this.register(p);
+      registered.push('openrouter');
     }
 
     const hasReal = registered.length > 0;
