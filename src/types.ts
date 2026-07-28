@@ -5,12 +5,21 @@ export interface ImageContent {
   image_url: { url: string };  // data:image/png;base64,... or https://...
 }
 
+export interface FileContent {
+  type: 'file';
+  file: {
+    data: string;       // base64-encoded file content (without data: prefix)
+    mimeType: string;    // e.g. application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    name?: string;       // original filename
+  };
+}
+
 export interface TextContent {
   type: 'text';
   text: string;
 }
 
-export type ContentPart = TextContent | ImageContent;
+export type ContentPart = TextContent | ImageContent | FileContent;
 
 export interface Message {
   role: MessageRole;
