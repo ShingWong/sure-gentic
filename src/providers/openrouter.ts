@@ -91,7 +91,7 @@ export class OpenRouterProvider implements LLMProvider {
       if (!res.ok) return this._defaultModels()
       const data = await res.json()
       return (data.data || [])
-        .filter((m: any) => m.architecture?.modality === 'text')
+        .filter((m: any) => (m.architecture?.modality || '').includes('text'))
         .map((m: any) => m.id)
         .sort()
     } catch {
