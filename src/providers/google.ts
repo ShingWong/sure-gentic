@@ -15,7 +15,7 @@ export class GoogleProvider implements LLMProvider {
         return new GoogleGenerativeAI(key);
       } catch {
         throw new Error(
-          'Missing dependency: npm install @google/generative-ai. Also set GOOGLE_API_KEY env var.'
+          'npm install @google/generative-ai. Also set GOOGLE_API_KEY env var (Google AI Studio → API Keys → Create Key).'
         );
       }
     })();
