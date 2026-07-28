@@ -1,12 +1,13 @@
 import type { LLMProvider, ProviderType } from '../types';
 import { OpenAIProvider } from './openai';
 import { AnthropicProvider } from './anthropic';
-import { GoogleProvider } from './google';
+import { GoogleAIStudioProvider } from './google-aistudio';
+import { GoogleVertexProvider } from './google-vertex';
 import { OpenAICompatibleProvider } from './openai-compatible';
 import { OpenRouterProvider } from './openrouter';
 import { MockProvider } from './mock';
 
-const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'openai-compatible', 'openrouter', 'mock'];
+const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'google-vertex', 'openai-compatible', 'openrouter', 'mock'];
 
 export class LLMProviderFactory {
   private static instance: LLMProviderFactory;
@@ -55,9 +56,14 @@ export class LLMProviderFactory {
       registered.push('anthropic');
     }
     if (process.env.GOOGLE_API_KEY) {
-      const p = new GoogleProvider();
+      const p = new GoogleAIStudioProvider();
       this.register(p);
       registered.push('google');
+    }
+    if (process.env.GOOGLE_VERTEX_PROJECT || process.env.GOOGLE_VERTEX_KEY) {
+      const p = new GoogleVertexProvider();
+      this.register(p);
+      registered.push('google-vertex');
     }
     if (process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL) {
       const p = new OpenAICompatibleProvider({
