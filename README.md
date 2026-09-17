@@ -71,6 +71,24 @@ export OPENAI_API_KEY=sk-proj-...
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+**OpenAI-compatible / self-hosted** — point at any OpenAI-style endpoint
+(Qwen, vLLM, llama.cpp). Two providers, same options shape — pick by runtime:
+
+```ts
+import { OpenAICompatibleProvider, FetchCompatibleProvider } from 'sure-gentic'
+
+// Node (uses the openai SDK under the hood):
+const node = new OpenAICompatibleProvider({
+  baseURL: 'http://192.168.11.249:8080/v1', defaultModel: 'qwen3:32b',
+})
+// Browser / Thunderbird extension (zero imports, fetch only):
+const browser = new FetchCompatibleProvider({
+  baseURL: 'http://192.168.11.249:8080/v1', defaultModel: 'qwen3:32b',
+})
+```
+
+Both support `tools` / `toolChoice` and return `tool_calls`.
+
 **Mock** — no API key needed, useful for testing. Enable with:
 
 ```bash
@@ -113,7 +131,7 @@ agent.context.temperature // → 0.7
 
 ### `agent.run(skill, context)`
 
-Executes a skill and returns `SkillResult`:
+Executes a skill once and returns `SkillResult`:
 
 ```ts
 const result = await agent.run(mySkill, { ... })
@@ -123,6 +141,25 @@ if (result.success) {
   console.error(result.error)  // API errors sanitized (keys redacted)
 }
 ```
+
+### `agent.runToolLoop(messages, options?)`
+
+Bounded agentic loop — the shared foundation for chatbot, Thunderbird
+plugin, and persona-bot. Sends messages + registry tool schemas, executes
+any returned `tool_calls` via the registry, appends results, and repeats
+until the model answers with text or `maxRounds` (default 5, capped 10):
+
+```ts
+const result = await agent.runToolLoop([
+  { role: 'system', content: 'Answer only from tool results.' },
+  { role: 'user', content: 'What invoices exist?' },
+])
+// → { success: true, data: '...', toolsUsed: ['recall_brain'] }
+```
+
+Requires a tool-capable provider (`openai`, `openai-compatible`, or
+`fetch-compatible`). Tools resolve by id first, then by name — the LLM only
+ever sees names.
 
 ## Skills
 
@@ -187,8 +224,26 @@ const weatherHandler: ToolHandler = async (params) => {
 
 ToolRegistryService.getInstance().register(weatherDef, weatherHandler)
 
-// Execute directly:
+// Execute directly (by id or name — the LLM only sees names):
 const result = await ToolRegistryService.getInstance().execute('get_weather', { city: 'London' }, { metadata: {} })
+
+// List (alias of getAll — this is what sure-chatbot /api/tools calls):
+const tools = ToolRegistryService.getInstance().listTools()
+```
+
+### Tool Schemas for LLMs
+
+Export the registry in OpenAI function-calling format and pass it to any
+tool-capable provider via `CompletionOptions.tools`:
+
+```ts
+import { ToolRegistryService } from 'sure-gentic'
+
+const tools = ToolRegistryService.getInstance().getOpenAITools()
+// → [{ type: 'function', function: { name, description, parameters } }]
+
+await provider.complete(messages, { tools, toolChoice: 'auto' })
+// → { content, toolCalls: [{ id, name, arguments }], ... }
 ```
 
 ## Streaming

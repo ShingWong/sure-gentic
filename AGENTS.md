@@ -10,6 +10,10 @@ A portable agent creation framework for TypeScript. Build AI agents with composa
 - `src/agent.ts` — Agent orchestrator class
 - `src/skills/skill.ts` — BaseSkill abstract class (extend this to create skills)
 - `src/tools/registry.ts` — ToolRegistryService singleton
+  (`register`, `execute` by id-or-name, `listTools`/`getAll`,
+  `getOpenAITools` schema export)
+- `src/providers/fetch-compatible.ts` — zero-import fetch provider for
+  browsers/extensions (same options shape as openai-compatible)
 - `src/tools/builtin.ts` — Built-in tool examples
 - `src/providers/factory.ts` — LLMProviderFactory singleton
 
@@ -26,6 +30,16 @@ A portable agent creation framework for TypeScript. Build AI agents with composa
 **Create a tool:** Define a `ToolDefinition` + `ToolHandler`, register via `ToolRegistryService.getInstance().register()`.
 
 **Run an agent:** `new Agent()` → `await agent.run(skill, context)` → `SkillResult`.
+Single-shot. For tool use, see the agentic loop below.
+
+**Run the agentic loop:** `await agent.runToolLoop(messages, { maxRounds })` —
+sends messages + `registry.getOpenAITools()`, executes returned `tool_calls`
+via the registry (lookup by id, fallback by name), repeats to answer.
+Returns `{ success, data, toolsUsed }`.
+
+**Expose tools to an LLM:** `registry.getOpenAITools()` → OpenAI
+`{ type: 'function', function: {...} }` format → `provider.complete(msgs,
+{ tools, toolChoice: 'auto' })` → `response.toolCalls`.
 
 ## Provider setup
 
@@ -38,7 +52,7 @@ A portable agent creation framework for TypeScript. Build AI agents with composa
 
 ```bash
 npm run build     # tsc (ESM + CJS)
-npm test          # vitest (10 tests)
+npm test          # vitest (14 tests, incl. tool-loop suite)
 npm run typecheck # tsc --noEmit
 ```
 
