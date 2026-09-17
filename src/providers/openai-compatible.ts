@@ -1,5 +1,17 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types';
 
+function safeParseArgs(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'string') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name = 'openai-compatible';
   private clientReady: Promise<any>;
@@ -45,10 +57,17 @@ export class OpenAICompatibleProvider implements LLMProvider {
       max_tokens: options?.maxTokens,
       top_p: options?.topP,
       stop: options?.stop,
+      ...(options?.tools?.length ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' } : {}),
     });
     const choice = response.choices[0];
+    const rawCalls = choice?.message?.tool_calls || [];
     return {
       content: choice?.message?.content || '',
+      toolCalls: rawCalls.map((tc: any) => ({
+        id: tc.id,
+        name: tc.function?.name || tc.name,
+        arguments: safeParseArgs(tc.function?.arguments),
+      })),
       model: response.model,
       usage: response.usage ? {
         promptTokens: response.usage.prompt_tokens,

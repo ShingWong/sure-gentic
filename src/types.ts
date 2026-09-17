@@ -1,4 +1,4 @@
-export type MessageRole = 'system' | 'user' | 'assistant';
+export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
 export interface ImageContent {
   type: 'image_url';
@@ -21,10 +21,27 @@ export interface TextContent {
 
 export type ContentPart = TextContent | ImageContent | FileContent;
 
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface OpenAIFunctionTool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
+}
+
 export interface Message {
   role: MessageRole;
   content: string | ContentPart[];
   name?: string;
+  toolCalls?: ToolCall[];
+  toolCallId?: string;
 }
 
 export interface CompletionOptions {
@@ -35,6 +52,8 @@ export interface CompletionOptions {
   frequencyPenalty?: number;
   presencePenalty?: number;
   stop?: string[];
+  tools?: OpenAIFunctionTool[];
+  toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
 }
 
 export interface CompletionUsage {
@@ -45,6 +64,7 @@ export interface CompletionUsage {
 
 export interface CompletionResponse {
   content: string;
+  toolCalls?: ToolCall[];
   model: string;
   usage?: CompletionUsage;
   finishReason?: string;

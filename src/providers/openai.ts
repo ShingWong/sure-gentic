@@ -1,5 +1,17 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types';
 
+function safeParseArgs(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'string') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export class OpenAIProvider implements LLMProvider {
   readonly name = 'openai';
   private clientReady: Promise<any>;
@@ -30,10 +42,17 @@ export class OpenAIProvider implements LLMProvider {
       frequency_penalty: options?.frequencyPenalty,
       presence_penalty: options?.presencePenalty,
       stop: options?.stop,
+      ...(options?.tools?.length ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' } : {}),
     });
     const choice = response.choices[0];
+    const rawCalls = choice?.message?.tool_calls || [];
     return {
       content: choice?.message?.content || '',
+      toolCalls: rawCalls.map((tc: any) => ({
+        id: tc.id,
+        name: tc.function?.name || tc.name,
+        arguments: safeParseArgs(tc.function?.arguments),
+      })),
       model: response.model,
       usage: response.usage ? {
         promptTokens: response.usage.prompt_tokens,

@@ -5,6 +5,7 @@ export { AnthropicProvider } from './providers/anthropic';
 export { GoogleAIStudioProvider } from './providers/google-aistudio';
 export { GoogleVertexProvider } from './providers/google-vertex';
 export { OpenAICompatibleProvider } from './providers/openai-compatible';
+export { FetchCompatibleProvider } from './providers/fetch-compatible';
 export { OpenRouterProvider } from './providers/openrouter';
 export { MockProvider } from './providers/mock';
 export { BaseSkill } from './skills/skill';
@@ -19,6 +20,8 @@ export type {
   CompletionOptions,
   CompletionResponse,
   CompletionUsage,
+  ToolCall,
+  OpenAIFunctionTool,
   Skill,
   SkillResult,
   AgentContext,
