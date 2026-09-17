@@ -12,6 +12,10 @@ A portable agent creation framework for TypeScript. Build AI agents with composa
 - `src/tools/registry.ts` — ToolRegistryService singleton
   (`register`, `execute` by id-or-name, `listTools`/`getAll`,
   `getOpenAITools` schema export)
+- `src/tools/registry.test.ts` — registry suite (LLM tool call by name)
+- `scripts/smoke/` — plain-Node ESM checks (`node-import`, `tool-name`)
+- `tsconfig.nodenext.json` — NodeNext check: all relative imports carry
+  explicit `.js` extensions so `dist/node` loads under plain Node
 - `src/providers/fetch-compatible.ts` — zero-import fetch provider for
   browsers/extensions (same options shape as openai-compatible)
 - `src/tools/builtin.ts` — Built-in tool examples
@@ -51,8 +55,8 @@ Returns `{ success, data, toolsUsed }`.
 ## Build & test
 
 ```bash
-npm run build     # tsc (ESM + CJS)
-npm test          # vitest (14 tests, incl. tool-loop suite)
+npm run build     # tsc (ESM + CJS + NodeNext smoke)
+npm test          # vitest (15 tests, incl. tool-loop and registry suites)
 npm run typecheck # tsc --noEmit
 ```
 

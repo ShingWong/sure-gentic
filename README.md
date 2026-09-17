@@ -271,6 +271,16 @@ await provider.completeStream(
 | `SEARCH_API_KEY` | — | SerpAPI key for `web_search` tool |
 | `NODE_ENV` | — | When `test`, enables Mock provider |
 
+## Import contract
+
+All relative source imports carry explicit `.js` extensions
+(`./types.js`, `./providers/factory.js`). `tsconfig.json` uses
+`moduleResolution: bundler` for dev; `tsconfig.nodenext.json` enforces the
+NodeNext contract and emits `dist/node`, which loads under plain Node
+without `tsx`. `npm run build` compiles ESM + CJS + NodeNext and runs both
+smoke scripts, so extensionless imports fail the build instead of
+surfacing at runtime.
+
 ## API Reference
 
 | Import | Type | Description |
@@ -284,6 +294,7 @@ await provider.completeStream(
 | `ToolRegistryService` | class (singleton) | Register and execute tools |
 | `validateParameters` | function | Validate params against a `ToolDefinition` |
 | `registerBuiltinTools` | function | Registers built-in tools (called in Agent constructor) |
+| `FetchCompatibleProvider` | class | Zero-import fetch-only OpenAI-compatible provider (browsers, Thunderbird) |
 | `loadConfig` | function | Loads `SureGenticConfig` from env vars |
 
 ### Types
@@ -355,6 +366,8 @@ git clone git@github.com:ShingWong/sure-gentic.git
 cd sure-gentic
 npm install
 npm run build
-npm test           # 10 tests
+npm test           # 15 tests (tool loop, registry, builtin)
+node scripts/smoke/node-import.mjs  # plain-Node ESM import + schema check
+node scripts/smoke/tool-name.mjs    # registry name-lookup check
 npm run typecheck  # tsc --noEmit
 ```
