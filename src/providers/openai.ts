@@ -12,6 +12,24 @@ function safeParseArgs(raw: unknown): Record<string, unknown> {
   }
 }
 
+function toOpenAIMessages(messages: Message[]): Record<string, unknown>[] {
+  return messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+    ...(m.toolCalls?.length
+      ? {
+          tool_calls: m.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.name, arguments: JSON.stringify(tc.arguments || {}) },
+          })),
+        }
+      : {}),
+    ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+    ...(m.role === 'tool' && m.name ? { name: m.name } : {}),
+  }));
+}
+
 export class OpenAIProvider implements LLMProvider {
   readonly name = 'openai';
   private clientReady: Promise<any>;
@@ -35,7 +53,7 @@ export class OpenAIProvider implements LLMProvider {
     const model = options?.model || this.defaultModel;
     const response = await c.chat.completions.create({
       model,
-      messages,
+      messages: toOpenAIMessages(messages),
       temperature: options?.temperature ?? 0.7,
       max_tokens: options?.maxTokens,
       top_p: options?.topP,
@@ -99,7 +117,7 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   async countTokens(messages: Message[]): Promise<number> {
-    return Math.ceil(messages.reduce((s, m) => s + m.content.length, 0) / 4);
+    return Math.ceil(messages.reduce((s, m) => s + contentLength(m.content), 0) / 4);
   }
 
   async getAvailableModels(): Promise<string[]> {
@@ -109,4 +127,13 @@ export class OpenAIProvider implements LLMProvider {
   async validateConfig(): Promise<boolean> {
     return !!process.env.OPENAI_API_KEY;
   }
+}
+
+function contentLength(content: Message['content']): number {
+  if (typeof content === 'string') return content.length;
+  return content.reduce((s, p) => {
+    if (p.type === 'text') return s + p.text.length;
+    if (p.type === 'image_url') return s + p.image_url.url.length;
+    return s + p.file.data.length;
+  }, 0);
 }

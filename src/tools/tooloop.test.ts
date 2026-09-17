@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { Agent } from '../agent';
+import { Agent } from '../agent.js';
 import { ToolRegistryService } from './registry.js';
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
 

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ToolRegistryService } from './registry.js';
-import { registerBuiltinTools } from './builtin';
+import { registerBuiltinTools } from './builtin.js';
 
 describe('calculator tool', () => {
   beforeAll(() => {
