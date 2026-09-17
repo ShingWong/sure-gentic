@@ -8,12 +8,17 @@ export interface SureGenticConfig {
   ollamaBaseUrl: string;
 }
 
+function nodeEnv(): Record<string, string | undefined> {
+  return typeof process !== 'undefined' ? process.env : {};
+}
+
 export function loadConfig(): SureGenticConfig {
+  const env = nodeEnv();
   return {
-    provider: (process.env.AI_PROVIDER as ProviderType) || undefined,
-    apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GOOGLE_GEMINI_API_KEY,
-    model: process.env.AI_MODEL,
-    temperature: parseFloat(process.env.AI_TEMPERATURE || '0.7'),
-    ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    provider: (env.AI_PROVIDER as ProviderType) || undefined,
+    apiKey: env.OPENAI_API_KEY || env.ANTHROPIC_API_KEY || env.GOOGLE_GEMINI_API_KEY,
+    model: env.AI_MODEL,
+    temperature: parseFloat(env.AI_TEMPERATURE || '0.7'),
+    ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://localhost:11434',
   };
 }

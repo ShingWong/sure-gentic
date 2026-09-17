@@ -43,6 +43,7 @@ export class LLMProviderFactory {
   }
 
   initializeFromEnv(): { registered: string[]; defaultProvider: LLMProvider | undefined } {
+    if (typeof process === 'undefined') return { registered: [], defaultProvider: undefined };
     const registered: string[] = [];
 
     if (process.env.OPENAI_API_KEY && !process.env.VISION_BASE_URL) {

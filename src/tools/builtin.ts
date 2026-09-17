@@ -4,7 +4,7 @@ import { ToolRegistryService } from './registry.js';
 async function webSearchHandler(params: Record<string, unknown>, _context: ToolContext): Promise<unknown> {
   const query = params.query as string;
   const maxResults = (params.max_results as number) || 5;
-  const searchApiKey = process.env.SEARCH_API_KEY;
+  const searchApiKey = typeof process !== 'undefined' ? process.env.SEARCH_API_KEY : undefined;
 
   if (searchApiKey) {
     try {
