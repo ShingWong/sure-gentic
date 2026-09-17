@@ -1,11 +1,11 @@
-import type { LLMProvider, ProviderType } from '../types';
-import { OpenAIProvider } from './openai';
-import { AnthropicProvider } from './anthropic';
-import { GoogleAIStudioProvider } from './google-aistudio';
-import { GoogleVertexProvider } from './google-vertex';
-import { OpenAICompatibleProvider } from './openai-compatible';
-import { OpenRouterProvider } from './openrouter';
-import { MockProvider } from './mock';
+import type { LLMProvider, ProviderType } from '../types.js';
+import { OpenAIProvider } from './openai.js';
+import { AnthropicProvider } from './anthropic.js';
+import { GoogleAIStudioProvider } from './google-aistudio.js';
+import { GoogleVertexProvider } from './google-vertex.js';
+import { OpenAICompatibleProvider } from './openai-compatible.js';
+import { OpenRouterProvider } from './openrouter.js';
+import { MockProvider } from './mock.js';
 
 const PROVIDER_PRIORITY: ProviderType[] = ['openai', 'anthropic', 'google', 'google-vertex', 'openai-compatible', 'openrouter', 'mock'];
 

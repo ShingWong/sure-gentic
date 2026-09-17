@@ -1,4 +1,4 @@
-import type { Skill, SkillResult, AgentContext } from '../types';
+import type { Skill, SkillResult, AgentContext } from '../types.js';
 
 export abstract class BaseSkill<TContext, TResult> implements Skill<TContext, TResult> {
   abstract readonly name: string;

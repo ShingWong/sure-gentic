@@ -1,18 +1,18 @@
-export { Agent } from './agent';
-export { LLMProviderFactory } from './providers/factory';
-export { OpenAIProvider } from './providers/openai';
-export { AnthropicProvider } from './providers/anthropic';
-export { GoogleAIStudioProvider } from './providers/google-aistudio';
-export { GoogleVertexProvider } from './providers/google-vertex';
-export { OpenAICompatibleProvider } from './providers/openai-compatible';
-export { FetchCompatibleProvider } from './providers/fetch-compatible';
-export { OpenRouterProvider } from './providers/openrouter';
-export { MockProvider } from './providers/mock';
-export { BaseSkill } from './skills/skill';
-export { loadConfig } from './config';
-export { ToolRegistryService } from './tools/registry';
-export { validateParameters } from './tools/validator';
-export { registerBuiltinTools } from './tools/builtin';
+export { Agent } from './agent.js';
+export { LLMProviderFactory } from './providers/factory.js';
+export { OpenAIProvider } from './providers/openai.js';
+export { AnthropicProvider } from './providers/anthropic.js';
+export { GoogleAIStudioProvider } from './providers/google-aistudio.js';
+export { GoogleVertexProvider } from './providers/google-vertex.js';
+export { OpenAICompatibleProvider } from './providers/openai-compatible.js';
+export { FetchCompatibleProvider } from './providers/fetch-compatible.js';
+export { OpenRouterProvider } from './providers/openrouter.js';
+export { MockProvider } from './providers/mock.js';
+export { BaseSkill } from './skills/skill.js';
+export { loadConfig } from './config.js';
+export { ToolRegistryService } from './tools/registry.js';
+export { validateParameters } from './tools/validator.js';
+export { registerBuiltinTools } from './tools/builtin.js';
 export type {
   LLMProvider,
   Message,
@@ -31,4 +31,4 @@ export type {
   ToolHandler,
   ToolContext,
   ToolExecutionResult,
-} from './types';
+} from './types.js';

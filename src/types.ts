@@ -101,4 +101,4 @@ export interface SkillResult {
 
 export type ProviderType = 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'openai-compatible' | 'openrouter' | 'ollama' | 'mock';
 
-export type { ToolDefinition, ToolParameter, ToolHandler, ToolContext, ToolExecutionResult } from './tools/types';
+export type { ToolDefinition, ToolParameter, ToolHandler, ToolContext, ToolExecutionResult } from './tools/types.js';

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { LLMProviderFactory } from './factory';
+import { LLMProviderFactory } from './factory.js';
 
 describe('LLMProviderFactory', () => {
   beforeEach(() => {

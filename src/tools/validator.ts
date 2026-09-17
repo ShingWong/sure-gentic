@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolParameter } from './types';
+import type { ToolDefinition, ToolParameter } from './types.js';
 
 export interface ValidationError {
   field: string;

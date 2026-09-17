@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types';
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
 
 export class AnthropicProvider implements LLMProvider {
   readonly name = 'anthropic';

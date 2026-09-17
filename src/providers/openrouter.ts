@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types'
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js'
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 

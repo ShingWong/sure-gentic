@@ -1,6 +1,6 @@
-import type { ToolDefinition, ToolHandler } from './types';
-import type { OpenAIFunctionTool } from '../types';
-import { validateParameters } from './validator';
+import type { ToolDefinition, ToolHandler } from './types.js';
+import type { OpenAIFunctionTool } from '../types.js';
+import { validateParameters } from './validator.js';
 
 export class ToolRegistryService {
   private static instance: ToolRegistryService;

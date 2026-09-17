@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ToolRegistryService } from './registry';
+import { ToolRegistryService } from './registry.js';
 import { registerBuiltinTools } from './builtin';
 
 describe('calculator tool', () => {

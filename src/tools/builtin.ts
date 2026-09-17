@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolHandler, ToolContext } from './types';
-import { ToolRegistryService } from './registry';
+import type { ToolDefinition, ToolHandler, ToolContext } from './types.js';
+import { ToolRegistryService } from './registry.js';
 
 async function webSearchHandler(params: Record<string, unknown>, _context: ToolContext): Promise<unknown> {
   const query = params.query as string;

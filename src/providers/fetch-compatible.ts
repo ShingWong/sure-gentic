@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ToolCall } from '../types';
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ToolCall } from '../types.js';
 
 /**
  * Fetch-only OpenAI-compatible provider. Zero imports — no `openai` SDK,

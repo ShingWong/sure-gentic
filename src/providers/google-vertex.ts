@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types';
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types.js';
 
 /** Convert content parts to Vertex AI inlineData/text format */
 function toVertexParts(content: string | ContentPart[]): any[] {

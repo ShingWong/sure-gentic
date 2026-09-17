@@ -1,8 +1,8 @@
-import type { LLMProvider, AgentContext, Skill, SkillResult, Message } from './types';
-import { LLMProviderFactory } from './providers/factory';
-import { loadConfig } from './config';
-import { registerBuiltinTools } from './tools/builtin';
-import { ToolRegistryService } from './tools/registry';
+import type { LLMProvider, AgentContext, Skill, SkillResult, Message } from './types.js';
+import { LLMProviderFactory } from './providers/factory.js';
+import { loadConfig } from './config.js';
+import { registerBuiltinTools } from './tools/builtin.js';
+import { ToolRegistryService } from './tools/registry.js';
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-4o',

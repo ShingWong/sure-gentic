@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types';
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
 
 function safeParseArgs(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'string') return {};

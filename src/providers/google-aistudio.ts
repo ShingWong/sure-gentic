@@ -1,4 +1,4 @@
-import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types';
+import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types.js';
 
 /** Convert content parts to Gemini inlineData/text format */
 function toGeminiParts(content: string | ContentPart[]): any[] {

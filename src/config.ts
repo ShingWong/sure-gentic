@@ -1,4 +1,4 @@
-import type { ProviderType } from './types';
+import type { ProviderType } from './types.js';
 
 export interface SureGenticConfig {
   provider?: ProviderType;
