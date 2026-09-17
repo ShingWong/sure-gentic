@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
+import { nodeEnv } from '../config.js';
 
 export class AnthropicProvider implements LLMProvider {
   readonly name = 'anthropic';
@@ -7,7 +8,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(apiKey?: string, defaultModel = 'claude-sonnet-4-20250514') {
     this.defaultModel = defaultModel;
-    const key = apiKey || process.env.ANTHROPIC_API_KEY;
+    const key = apiKey || nodeEnv().ANTHROPIC_API_KEY;
     this.clientReady = (async () => {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       return new Anthropic({ apiKey: key });
@@ -99,7 +100,7 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async countTokens(messages: Message[]): Promise<number> {
-    return Math.ceil(messages.reduce((s, m) => s + m.content.length, 0) / 4);
+    return Math.ceil(messages.reduce((s, m) => s + contentLength(m.content), 0) / 4);
   }
 
   async getAvailableModels(): Promise<string[]> {
@@ -107,6 +108,15 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async validateConfig(): Promise<boolean> {
-    return !!process.env.ANTHROPIC_API_KEY;
+    return !!nodeEnv().ANTHROPIC_API_KEY;
   }
+}
+
+function contentLength(content: Message['content']): number {
+  if (typeof content === 'string') return content.length;
+  return content.reduce((s, p) => {
+    if (p.type === 'text') return s + p.text.length;
+    if (p.type === 'image_url') return s + p.image_url.url.length;
+    return s + p.file.data.length;
+  }, 0);
 }

@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
+import { nodeEnv } from '../config.js';
 
 function safeParseArgs(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'string') return {};
@@ -37,7 +38,7 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(apiKey?: string, defaultModel = 'gpt-4o') {
     this.defaultModel = defaultModel;
-    const key = apiKey || process.env.OPENAI_API_KEY;
+    const key = apiKey || nodeEnv().OPENAI_API_KEY;
     this.clientReady = (async () => {
       const { default: OpenAI } = await import('openai');
       return new OpenAI({ apiKey: key });
@@ -125,7 +126,7 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   async validateConfig(): Promise<boolean> {
-    return !!process.env.OPENAI_API_KEY;
+    return !!nodeEnv().OPENAI_API_KEY;
   }
 }
 

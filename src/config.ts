@@ -8,7 +8,7 @@ export interface SureGenticConfig {
   ollamaBaseUrl: string;
 }
 
-function nodeEnv(): Record<string, string | undefined> {
+export function nodeEnv(): Record<string, string | undefined> {
   return typeof process !== 'undefined' ? process.env : {};
 }
 

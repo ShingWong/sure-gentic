@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types.js';
+import { nodeEnv } from '../config.js';
 
 /** Convert content parts to Gemini inlineData/text format */
 function toGeminiParts(content: string | ContentPart[]): any[] {
@@ -22,7 +23,8 @@ export class GoogleAIStudioProvider implements LLMProvider {
 
   constructor(apiKey?: string, defaultModel = 'gemini-2.5-flash-lite') {
     this.defaultModel = defaultModel;
-    const key = apiKey || process.env.GOOGLE_API_KEY || process.env.VISION_API_KEY || '';
+    const env = nodeEnv();
+    const key = apiKey || env.GOOGLE_API_KEY || env.VISION_API_KEY || '';
     this.clientReady = (async () => {
       try {
         // @ts-ignore
@@ -86,7 +88,8 @@ const { GoogleGenerativeAI } = await import('@google/generative-ai');
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const key = process.env.GOOGLE_API_KEY || process.env.VISION_API_KEY;
+    const env = nodeEnv();
+    const key = env.GOOGLE_API_KEY || env.VISION_API_KEY;
     if (key) {
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${key}`, { signal: AbortSignal.timeout(8000) });
@@ -103,6 +106,7 @@ const { GoogleGenerativeAI } = await import('@google/generative-ai');
   }
 
   async validateConfig(): Promise<boolean> {
-    return !!(process.env.GOOGLE_API_KEY || process.env.VISION_API_KEY);
+    const env = nodeEnv();
+    return !!(env.GOOGLE_API_KEY || env.VISION_API_KEY);
   }
 }

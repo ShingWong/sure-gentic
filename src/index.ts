@@ -9,7 +9,7 @@ export { FetchCompatibleProvider } from './providers/fetch-compatible.js';
 export { OpenRouterProvider } from './providers/openrouter.js';
 export { MockProvider } from './providers/mock.js';
 export { BaseSkill } from './skills/skill.js';
-export { loadConfig } from './config.js';
+export { loadConfig, nodeEnv } from './config.js';
 export { ToolRegistryService } from './tools/registry.js';
 export { validateParameters } from './tools/validator.js';
 export { registerBuiltinTools } from './tools/builtin.js';

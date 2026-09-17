@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
+import { nodeEnv } from '../config.js';
 
 function safeParseArgs(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'string') return {};
@@ -43,10 +44,11 @@ export class OpenAICompatibleProvider implements LLMProvider {
     defaultModel?: string;
     label?: string;
   }) {
-    this.defaultModel = options?.defaultModel || process.env.AI_MODEL || 'gpt-4o';
-    this.baseURL = options?.baseURL || process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+    const env = nodeEnv();
+    this.defaultModel = options?.defaultModel || env.AI_MODEL || 'gpt-4o';
+    this.baseURL = options?.baseURL || env.VISION_BASE_URL || env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
     this.label = options?.label || 'openai-compatible';
-    const key = options?.apiKey || process.env.OPENAI_API_KEY || process.env.VISION_API_KEY || 'not-needed';
+    const key = options?.apiKey || env.OPENAI_API_KEY || env.VISION_API_KEY || 'not-needed';
     const baseURL = this.baseURL;
     this.clientReady = (async () => {
       try {
@@ -140,7 +142,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
   }
 
   async validateConfig(): Promise<boolean> {
-    return !!(this.baseURL && process.env.OPENAI_API_KEY);
+    return !!(this.baseURL && nodeEnv().OPENAI_API_KEY);
   }
 }
 

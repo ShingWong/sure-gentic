@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js'
+import { nodeEnv } from '../config.js'
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 
@@ -17,8 +18,9 @@ export class OpenRouterProvider implements LLMProvider {
   private defaultModel: string
 
   constructor(apiKey?: string, defaultModel?: string) {
-    this.apiKey = apiKey || process.env.OPENROUTER_API_KEY || process.env.VISION_API_KEY || ''
-    this.defaultModel = defaultModel || process.env.AI_MODEL || 'openai/gpt-4o'
+    const env = nodeEnv();
+    this.apiKey = apiKey || env.OPENROUTER_API_KEY || env.VISION_API_KEY || ''
+    this.defaultModel = defaultModel || env.AI_MODEL || 'openai/gpt-4o'
   }
 
   async complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
@@ -78,7 +80,7 @@ export class OpenRouterProvider implements LLMProvider {
   }
 
   async countTokens(messages: Message[]): Promise<number> {
-    return Math.ceil(messages.reduce((s, m) => s + m.content.length, 0) / 4)
+    return Math.ceil(messages.reduce((s, m) => s + contentLength(m.content), 0) / 4)
   }
 
   async getAvailableModels(): Promise<string[]> {
@@ -115,4 +117,13 @@ export class OpenRouterProvider implements LLMProvider {
   async validateConfig(): Promise<boolean> {
     return !!this.apiKey
   }
+}
+
+function contentLength(content: Message['content']): number {
+  if (typeof content === 'string') return content.length
+  return content.reduce((s, p) => {
+    if (p.type === 'text') return s + p.text.length
+    if (p.type === 'image_url') return s + p.image_url.url.length
+    return s + p.file.data.length
+  }, 0)
 }

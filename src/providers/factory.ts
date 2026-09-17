@@ -1,4 +1,5 @@
 import type { LLMProvider, ProviderType } from '../types.js';
+import { nodeEnv } from '../config.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleAIStudioProvider } from './google-aistudio.js';
@@ -44,44 +45,45 @@ export class LLMProviderFactory {
 
   initializeFromEnv(): { registered: string[]; defaultProvider: LLMProvider | undefined } {
     if (typeof process === 'undefined') return { registered: [], defaultProvider: undefined };
+    const env = nodeEnv();
     const registered: string[] = [];
 
-    if (process.env.OPENAI_API_KEY && !process.env.VISION_BASE_URL) {
+    if (env.OPENAI_API_KEY && !env.VISION_BASE_URL) {
       const p = new OpenAIProvider();
       this.register(p);
       registered.push('openai');
     }
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (env.ANTHROPIC_API_KEY) {
       const p = new AnthropicProvider();
       this.register(p);
       registered.push('anthropic');
     }
-    if (process.env.GOOGLE_API_KEY) {
+    if (env.GOOGLE_API_KEY) {
       const p = new GoogleAIStudioProvider();
       this.register(p);
       registered.push('google');
     }
-    if (process.env.GOOGLE_VERTEX_PROJECT || process.env.GOOGLE_VERTEX_KEY) {
+    if (env.GOOGLE_VERTEX_PROJECT || env.GOOGLE_VERTEX_KEY) {
       const p = new GoogleVertexProvider();
       this.register(p);
       registered.push('google-vertex');
     }
-    if (process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL) {
+    if (env.VISION_BASE_URL || env.OPENAI_BASE_URL) {
       const p = new OpenAICompatibleProvider({
-        baseURL: process.env.VISION_BASE_URL || process.env.OPENAI_BASE_URL,
-        apiKey: process.env.VISION_API_KEY || process.env.OPENAI_API_KEY,
+        baseURL: env.VISION_BASE_URL || env.OPENAI_BASE_URL,
+        apiKey: env.VISION_API_KEY || env.OPENAI_API_KEY,
       });
       this.register(p);
       registered.push('openai-compatible');
     }
-    if (process.env.OPENROUTER_API_KEY) {
+    if (env.OPENROUTER_API_KEY) {
       const p = new OpenRouterProvider();
       this.register(p);
       registered.push('openrouter');
     }
 
     const hasReal = registered.length > 0;
-    if (!hasReal && (process.env.AI_PROVIDER === 'mock' || process.env.NODE_ENV === 'test')) {
+    if (!hasReal && (env.AI_PROVIDER === 'mock' || env.NODE_ENV === 'test')) {
       const mock = new MockProvider();
       this.register(mock);
       registered.push('mock');

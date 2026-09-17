@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ContentPart } from '../types.js';
+import { nodeEnv } from '../config.js';
 
 /** Convert content parts to Vertex AI inlineData/text format */
 function toVertexParts(content: string | ContentPart[]): any[] {
@@ -22,8 +23,9 @@ export class GoogleVertexProvider implements LLMProvider {
 
   constructor(apiKey?: string, defaultModel = 'gemini-2.5-flash-lite', region = 'us-central1') {
     this.defaultModel = defaultModel;
-    const project = apiKey || process.env.GOOGLE_VERTEX_PROJECT || '';
-    const location = region || process.env.GOOGLE_VERTEX_LOCATION || 'us-central1';
+    const env = nodeEnv();
+    const project = apiKey || env.GOOGLE_VERTEX_PROJECT || '';
+    const location = region || env.GOOGLE_VERTEX_LOCATION || 'us-central1';
     const baseUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models`;
 
     this.clientReady = (async () => {
@@ -31,7 +33,7 @@ export class GoogleVertexProvider implements LLMProvider {
         // @ts-ignore
 const { GoogleGenerativeAI } = await import('@google/generative-ai');
         // Vertex uses Application Default Credentials (ADC) — no API key passed
-        process.env.GOOGLE_API_BASE_URL = baseUrl;
+        if (typeof process !== 'undefined') process.env.GOOGLE_API_BASE_URL = baseUrl;
         return new GoogleGenerativeAI('vertex-auth-token');
       } catch {
         throw new Error('npm install @google/generative-ai. Set GOOGLE_VERTEX_PROJECT and GCLOUD_PROJECT, or use ADC.');
@@ -89,12 +91,13 @@ const { GoogleGenerativeAI } = await import('@google/generative-ai');
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const project = process.env.GOOGLE_VERTEX_PROJECT || process.env.GCLOUD_PROJECT || '';
-    const location = process.env.GOOGLE_VERTEX_LOCATION || 'us-central1';
+    const env = nodeEnv();
+    const project = env.GOOGLE_VERTEX_PROJECT || env.GCLOUD_PROJECT || '';
+    const location = env.GOOGLE_VERTEX_LOCATION || 'us-central1';
     if (project) {
       try {
         const res = await fetch(`https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models`, {
-          headers: { 'Authorization': 'Bearer ' + (process.env.GOOGLE_VERTEX_KEY || '') },
+          headers: { 'Authorization': 'Bearer ' + (env.GOOGLE_VERTEX_KEY || '') },
           signal: AbortSignal.timeout(8000),
         });
         if (res.ok) {
@@ -107,6 +110,7 @@ const { GoogleGenerativeAI } = await import('@google/generative-ai');
   }
 
   async validateConfig(): Promise<boolean> {
-    return !!(process.env.GOOGLE_VERTEX_PROJECT || process.env.GCLOUD_PROJECT);
+    const env = nodeEnv();
+    return !!(env.GOOGLE_VERTEX_PROJECT || env.GCLOUD_PROJECT);
   }
 }
