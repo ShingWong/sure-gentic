@@ -12,7 +12,7 @@ export { BaseSkill } from './skills/skill.js';
 export { loadConfig, nodeEnv } from './config.js';
 export { ToolRegistryService } from './tools/registry.js';
 export { validateParameters } from './tools/validator.js';
-export { registerBuiltinTools } from './tools/builtin.js';
+export { registerBuiltinTools, configureBuiltinTools, isSearchConfigured } from './tools/builtin.js';
 export type {
   LLMProvider,
   Message,

@@ -1,10 +1,31 @@
 import type { ToolDefinition, ToolHandler, ToolContext } from './types.js';
 import { ToolRegistryService } from './registry.js';
 
+/** Injected key (configureBuiltinTools) wins; env is the fallback. */
+let configuredSearchApiKey: string | undefined;
+
+function resolveSearchApiKey(): string | undefined {
+  if (configuredSearchApiKey) return configuredSearchApiKey;
+  return typeof process !== 'undefined' ? process.env.SEARCH_API_KEY : undefined;
+}
+
+/**
+ * Inject runtime config for builtin tools without env dependence
+ * (browsers, keystores, per-tenant keys). Omitted = clear to env fallback.
+ */
+export function configureBuiltinTools(opts?: { searchApiKey?: string }): void {
+  configuredSearchApiKey = opts?.searchApiKey || undefined;
+}
+
+/** True when web_search would hit the live API (vs mock results). */
+export function isSearchConfigured(): boolean {
+  return !!resolveSearchApiKey();
+}
+
 async function webSearchHandler(params: Record<string, unknown>, _context: ToolContext): Promise<unknown> {
   const query = params.query as string;
   const maxResults = (params.max_results as number) || 5;
-  const searchApiKey = typeof process !== 'undefined' ? process.env.SEARCH_API_KEY : undefined;
+  const searchApiKey = resolveSearchApiKey();
 
   if (searchApiKey) {
     try {

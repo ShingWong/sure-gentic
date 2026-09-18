@@ -49,15 +49,24 @@ export class Agent {
    * Budget: up to maxRounds tool rounds plus one final no-tools closing
    * call if maxRounds exhausts without a text answer.
    *
+   * `allowedTools` (names) further restricts which active tools are
+   * offered to the model. Unset = all active tools. Tool calls for
+   * non-offered tools are refused without executing. Direct
+   * `registry.execute()` calls are unaffected (admin/debug use).
+   *
    * Returns the final text plus the names of tools that fired (for citation).
    */
   async runToolLoop(
     messages: Message[],
-    options?: { maxRounds?: number; toolContext?: { sessionId?: string; userId?: string; metadata?: Record<string, unknown> } },
+    options?: { maxRounds?: number; allowedTools?: string[]; toolContext?: { sessionId?: string; userId?: string; metadata?: Record<string, unknown> } },
   ): Promise<SkillResult & { data: string; toolsUsed: string[] }> {
     const maxRounds = Math.min(Math.max(options?.maxRounds ?? 5, 1), 10);
     const registry = ToolRegistryService.getInstance();
-    const tools = registry.getOpenAITools();
+    const allTools = registry.getOpenAITools();
+    const tools = options?.allowedTools
+      ? allTools.filter(t => options.allowedTools!.includes(t.function.name))
+      : allTools;
+    const offered = new Set(tools.map(t => t.function.name));
     const convo: Message[] = [...messages];
     const toolsUsed: string[] = [];
     try {
@@ -75,16 +84,20 @@ export class Agent {
             toolCalls: resp.toolCalls,
           });
           for (const tc of resp.toolCalls.slice(0, 4)) {
-            if (!toolsUsed.includes(tc.name)) toolsUsed.push(tc.name);
             let result: unknown;
-            try {
-              const exec = await registry.execute(
-                tc.name, tc.arguments || {},
-                { sessionId: options?.toolContext?.sessionId, userId: options?.toolContext?.userId, metadata: options?.toolContext?.metadata },
-              );
-              result = exec.success ? exec.result : `Tool error: ${exec.error}`;
-            } catch (err) {
-              result = `Tool error: ${err instanceof Error ? err.message : String(err)}`;
+            if (!offered.has(tc.name)) {
+              result = `Tool error: tool '${tc.name}' is not enabled`;
+            } else {
+              if (!toolsUsed.includes(tc.name)) toolsUsed.push(tc.name);
+              try {
+                const exec = await registry.execute(
+                  tc.name, tc.arguments || {},
+                  { sessionId: options?.toolContext?.sessionId, userId: options?.toolContext?.userId, metadata: options?.toolContext?.metadata },
+                );
+                result = exec.success ? exec.result : `Tool error: ${exec.error}`;
+              } catch (err) {
+                result = `Tool error: ${err instanceof Error ? err.message : String(err)}`;
+              }
             }
             convo.push({
               role: 'tool',

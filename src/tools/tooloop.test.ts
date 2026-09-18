@@ -95,8 +95,7 @@ describe('tool loop', () => {
     expect(result.toolsUsed).toEqual(['echo_tool']);
   });
 
-  it('falls back to the sentinel (with cause) when the closing pass fails', async () => {
-    const failing = new (class implements LLMProvider {
+  it('falls back to the sentinel (with cause) when the closing pass fails', async () => {    const failing = new (class implements LLMProvider {
       readonly name = 'failing-close';
       calls = 0;
       async complete(_messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
@@ -118,5 +117,61 @@ describe('tool loop', () => {
     expect(result.success).toBe(true);
     expect(result.data).toBe('(agent hit max rounds without answering)');
     expect(result.error).toContain('closing boom');
+  });
+
+  it('allowedTools restricts the schemas sent to the provider', async () => {
+    const registry = ToolRegistryService.getInstance();
+    registry.register(
+      {
+        id: 'other', name: 'other_tool', description: 'Other',
+        parameters: [{ name: 'text', type: 'string', description: 'text', required: true }],
+        returns: { type: 'string', description: 'other' },
+        isActive: true,
+      },
+      async (params) => `other:${params.text}`,
+    );
+    const provider = new ScriptedProvider();
+    const agent = new Agent(provider);
+    await agent.runToolLoop([{ role: 'user', content: 'x' }], { allowedTools: ['other_tool'] });
+    const names = (provider.lastOptions?.tools ?? []).map(t => t.function.name);
+    expect(names).toEqual(['other_tool']);
+  });
+
+  it('refuses to execute a tool call that was not offered', async () => {
+    const sneaky = new (class implements LLMProvider {
+      readonly name = 'sneaky';
+      calls = 0;
+      toolContent?: string;
+      async complete(messages: Message[], _options?: CompletionOptions): Promise<CompletionResponse> {
+        this.calls++;
+        if (this.calls === 1) {
+          return {
+            content: '',
+            toolCalls: [{ id: 'tc1', name: 'echo_tool', arguments: { text: 'hi' } }],
+            model: 'sneaky',
+          };
+        }
+        const tm = messages.find((m) => m.role === 'tool');
+        this.toolContent = typeof tm?.content === 'string' ? tm.content : undefined;
+        return { content: `got: ${this.toolContent}`, model: 'sneaky' };
+      }
+      async countTokens(): Promise<number> { return 0; }
+      async getAvailableModels(): Promise<string[]> { return ['sneaky']; }
+    })();
+    const agent = new Agent(sneaky);
+    const result = await agent.runToolLoop([{ role: 'user', content: 'x' }], { allowedTools: ['no_such_tool'] });
+    expect(result.success).toBe(true);
+    expect(result.toolsUsed).toEqual([]);
+    expect(sneaky.toolContent).toContain('not enabled');
+    expect(result.data).toContain('not enabled');
+  });
+
+  it('inactive registry tools are excluded from the loop', async () => {
+    const provider = new ScriptedProvider();
+    const agent = new Agent(provider);
+    ToolRegistryService.getInstance().setToolActive('echo', false);
+    await agent.runToolLoop([{ role: 'user', content: 'x' }]);
+    expect(provider.lastOptions?.tools ?? []).toEqual([]);
+    expect(provider.lastOptions?.toolChoice).toBeUndefined();
   });
 });

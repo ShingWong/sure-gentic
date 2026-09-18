@@ -28,6 +28,24 @@ export class ToolRegistryService {
     return this.registry.get(toolId);
   }
 
+  /**
+   * Enable/disable a tool by id or name. Disabled tools stay listed
+   * (getAll/listTools/get) but are excluded from the schemas sent to
+   * models (getToolSchemas/getOpenAITools). Returns false for unknown ids.
+   */
+  setToolActive(toolIdOrName: string, active: boolean): boolean {
+    const tool = this.registry.get(toolIdOrName)
+      ?? this.getAll().find((t) => t.name === toolIdOrName);
+    if (!tool) return false;
+    this.registry.set(tool.id, { ...tool, isActive: active });
+    return true;
+  }
+
+  /** Tools eligible to be offered to a model (active only). */
+  getActive(): ToolDefinition[] {
+    return this.getAll().filter(t => t.isActive !== false);
+  }
+
   getAll(): ToolDefinition[] {
     return Array.from(this.registry.values());
   }
@@ -66,7 +84,7 @@ export class ToolRegistryService {
   }
 
   getToolSchemas(): Record<string, unknown>[] {
-    return this.getAll().map(tool => ({
+    return this.getActive().map(tool => ({
       name: tool.name,
       description: tool.description,
       parameters: {
@@ -92,7 +110,7 @@ export class ToolRegistryService {
    * so all consumers share one shape.
    */
   getOpenAITools(): OpenAIFunctionTool[] {
-    return this.getAll().map(tool => ({
+    return this.getActive().map(tool => ({
       type: 'function' as const,
       function: {
         name: tool.name,

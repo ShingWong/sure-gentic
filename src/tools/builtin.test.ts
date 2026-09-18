@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { ToolRegistryService } from './registry.js';
-import { registerBuiltinTools } from './builtin.js';
+import { registerBuiltinTools, configureBuiltinTools, isSearchConfigured } from './builtin.js';
 
 describe('calculator tool', () => {
   beforeAll(() => {
@@ -43,5 +43,39 @@ describe('calculator tool', () => {
   it('rejects empty expression', async () => {
     const result = await ToolRegistryService.getInstance().execute('calculator', { expression: '' }, { metadata: {} });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('builtin tool config', () => {
+  afterEach(() => {
+    configureBuiltinTools();
+    delete process.env.SEARCH_API_KEY;
+  });
+
+  it('isSearchConfigured reflects injected key, then env, then none', () => {
+    configureBuiltinTools();
+    delete process.env.SEARCH_API_KEY;
+    expect(isSearchConfigured()).toBe(false);
+
+    process.env.SEARCH_API_KEY = 'env-key';
+    expect(isSearchConfigured()).toBe(true);
+
+    configureBuiltinTools({ searchApiKey: '' });
+    expect(isSearchConfigured()).toBe(true); // cleared to env fallback
+
+    configureBuiltinTools({ searchApiKey: 'injected-key' });
+    delete process.env.SEARCH_API_KEY;
+    expect(isSearchConfigured()).toBe(true);
+  });
+
+  it('web_search returns mock results without a key', async () => {
+    configureBuiltinTools();
+    delete process.env.SEARCH_API_KEY;
+    const result = await ToolRegistryService.getInstance().execute(
+      'web_search', { query: 'test' }, { metadata: {} },
+    );
+    expect(result.success).toBe(true);
+    expect(Array.isArray(result.result)).toBe(true);
+    expect((result.result as { url: string }[])[0].url).toContain('example.com');
   });
 });
