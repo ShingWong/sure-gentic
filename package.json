@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && tsc -p tsconfig.nodenext.json && node scripts/smoke/node-import.mjs && node scripts/smoke/tool-name.mjs && node scripts/smoke/no-process.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

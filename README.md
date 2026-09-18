@@ -157,6 +157,12 @@ const result = await agent.runToolLoop([
 // → { success: true, data: '...', toolsUsed: ['recall_brain'] }
 ```
 
+`options`: `{ maxRounds? (default 5, capped 10), allowedTools?: string[] }`.
+`allowedTools` restricts which *active* tools are offered to the model;
+tool calls for non-offered tools are refused without executing (and are
+not recorded in `toolsUsed`). Direct `registry.execute()` calls are
+unaffected — the allowlist only governs the loop.
+
 Requires a tool-capable provider (`openai`, `openai-compatible`, or
 `fetch-compatible`). Tools resolve by id first, then by name — the LLM only
 ever sees names.
@@ -231,6 +237,19 @@ const result = await ToolRegistryService.getInstance().execute('get_weather', { 
 const tools = ToolRegistryService.getInstance().listTools()
 ```
 
+### Enabling / Disabling Tools
+
+`ToolDefinition.isActive` governs whether a tool is offered to models.
+Disabled tools stay listed but are excluded from `getToolSchemas()` and
+`getOpenAITools()` (and therefore from `runToolLoop`):
+
+```ts
+const registry = ToolRegistryService.getInstance()
+registry.setToolActive('web_search', false) // by id or name; false if unknown
+registry.getActive()                        // active tools only
+registry.listTools()                        // all tools, including disabled
+```
+
 ### Tool Schemas for LLMs
 
 Export the registry in OpenAI function-calling format and pass it to any
@@ -244,6 +263,19 @@ const tools = ToolRegistryService.getInstance().getOpenAITools()
 
 await provider.complete(messages, { tools, toolChoice: 'auto' })
 // → { content, toolCalls: [{ id, name, arguments }], ... }
+```
+
+### Builtin Tool Config
+
+`web_search` hits the live SerpAPI when a key is available, otherwise it
+returns clearly-mocked placeholder results. Inject the key at runtime
+(keystores, per-tenant keys, browsers) instead of relying on env:
+
+```ts
+import { configureBuiltinTools, isSearchConfigured } from 'sure-gentic'
+
+configureBuiltinTools({ searchApiKey: decrypted }) // omitted/empty = clear to env fallback
+isSearchConfigured() // true when web_search would hit the live API
 ```
 
 ## Streaming
@@ -268,7 +300,7 @@ await provider.completeStream(
 | `AI_PROVIDER` | auto | `openai`, `anthropic`, or `mock` |
 | `AI_MODEL` | provider default | Model override (e.g. `gpt-4o`, `claude-sonnet-4-20250514`) |
 | `AI_TEMPERATURE` | `0.7` | LLM temperature |
-| `SEARCH_API_KEY` | — | SerpAPI key for `web_search` tool |
+| `SEARCH_API_KEY` | — | SerpAPI key for `web_search` tool (fallback when nothing injected via `configureBuiltinTools`) |
 | `NODE_ENV` | — | When `test`, enables Mock provider |
 
 ## Import contract
@@ -277,7 +309,7 @@ All relative source imports carry explicit `.js` extensions
 (`./types.js`, `./providers/factory.js`). `tsconfig.json` uses
 `moduleResolution: bundler` for dev; `tsconfig.nodenext.json` enforces the
 NodeNext contract and emits `dist/node`, which loads under plain Node
-without `tsx`. `npm run build` compiles ESM + CJS + NodeNext and runs both
+without `tsx`. `npm run build` compiles ESM + CJS + NodeNext and runs the
 smoke scripts, so extensionless imports fail the build instead of
 surfacing at runtime.
 
@@ -294,6 +326,8 @@ surfacing at runtime.
 | `ToolRegistryService` | class (singleton) | Register and execute tools |
 | `validateParameters` | function | Validate params against a `ToolDefinition` |
 | `registerBuiltinTools` | function | Registers built-in tools (called in Agent constructor) |
+| `configureBuiltinTools` | function | Injects builtin tool config (`{ searchApiKey? }`) without env dependence |
+| `isSearchConfigured` | function | True when `web_search` would hit the live API |
 | `FetchCompatibleProvider` | class | Zero-import fetch-only OpenAI-compatible provider (browsers, Thunderbird) |
 | `loadConfig` | function | Loads `SureGenticConfig` from env vars |
 
@@ -366,7 +400,7 @@ git clone git@github.com:ShingWong/sure-gentic.git
 cd sure-gentic
 npm install
 npm run build
-npm test           # 15 tests (tool loop, registry, builtin)
+npm test           # 24 tests (tool loop, registry, builtin)
 node scripts/smoke/node-import.mjs  # plain-Node ESM import + schema check
 node scripts/smoke/tool-name.mjs    # registry name-lookup check
 npm run typecheck  # tsc --noEmit
