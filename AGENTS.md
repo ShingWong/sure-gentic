@@ -18,7 +18,8 @@ A portable agent creation framework for TypeScript. Build AI agents with composa
   explicit `.js` extensions so `dist/node` loads under plain Node
 - `src/providers/fetch-compatible.ts` — zero-import fetch provider for
   browsers/extensions (same options shape as openai-compatible)
-- `src/tools/builtin.ts` — Built-in tool examples
+- `src/tools/builtin.ts` — Built-in tools (calculator, web_search via SerpAPI/Exa, current_time)
+- `src/tools/firesearch.ts` — Firesearch tools (search/put_doc/create_index over your own indexes)
 - `src/providers/factory.ts` — LLMProviderFactory singleton
 
 ## Three concepts

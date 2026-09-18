@@ -13,6 +13,7 @@ export { loadConfig, nodeEnv } from './config.js';
 export { ToolRegistryService } from './tools/registry.js';
 export { validateParameters } from './tools/validator.js';
 export { registerBuiltinTools, configureBuiltinTools, isSearchConfigured } from './tools/builtin.js';
+export { registerFiresearchTools, configureFiresearchTools, isFiresearchConfigured } from './tools/firesearch.js';
 export type {
   LLMProvider,
   Message,

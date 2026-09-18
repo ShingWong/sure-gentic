@@ -2,6 +2,7 @@ import type { LLMProvider, AgentContext, Skill, SkillResult, Message } from './t
 import { LLMProviderFactory } from './providers/factory.js';
 import { loadConfig } from './config.js';
 import { registerBuiltinTools } from './tools/builtin.js';
+import { registerFiresearchTools } from './tools/firesearch.js';
 import { ToolRegistryService } from './tools/registry.js';
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -16,6 +17,7 @@ export class Agent {
 
   constructor(provider?: LLMProvider) {
     registerBuiltinTools();
+    registerFiresearchTools();
     this.factory = LLMProviderFactory.getInstance();
     const config = loadConfig();
     const resolvedProvider = provider || this.factory.initializeFromEnv().defaultProvider;

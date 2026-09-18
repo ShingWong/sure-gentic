@@ -1,44 +1,89 @@
 import type { ToolDefinition, ToolHandler, ToolContext } from './types.js';
 import { ToolRegistryService } from './registry.js';
 
-/** Injected key (configureBuiltinTools) wins; env is the fallback. */
+/** Injected keys (configureBuiltinTools) win; env is the fallback. */
 let configuredSearchApiKey: string | undefined;
+let configuredExaApiKey: string | undefined;
 
 function resolveSearchApiKey(): string | undefined {
   if (configuredSearchApiKey) return configuredSearchApiKey;
   return typeof process !== 'undefined' ? process.env.SEARCH_API_KEY : undefined;
 }
 
+function resolveExaApiKey(): string | undefined {
+  if (configuredExaApiKey) return configuredExaApiKey;
+  return typeof process !== 'undefined' ? process.env.EXA_API_KEY : undefined;
+}
+
 /**
  * Inject runtime config for builtin tools without env dependence
  * (browsers, keystores, per-tenant keys). Omitted = clear to env fallback.
  */
-export function configureBuiltinTools(opts?: { searchApiKey?: string }): void {
+export function configureBuiltinTools(opts?: { searchApiKey?: string; exaApiKey?: string }): void {
   configuredSearchApiKey = opts?.searchApiKey || undefined;
+  configuredExaApiKey = opts?.exaApiKey || undefined;
 }
 
-/** True when web_search would hit the live API (vs mock results). */
+/** True when web_search would hit a live API (vs mock results). */
 export function isSearchConfigured(): boolean {
-  return !!resolveSearchApiKey();
+  return !!resolveSearchApiKey() || !!resolveExaApiKey();
+}
+
+interface WebResult { title: string; snippet: string; url: string }
+
+async function serpSearch(query: string, maxResults: number, apiKey: string): Promise<WebResult[]> {
+  // Note: SerpAPI only supports api_key as URL query param (no Authorization header).
+  // The key appears in server access logs — restrict log access in production.
+  const url = `https://serpapi.com/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&num=${maxResults}`;
+  const res = await fetch(url);
+  const data = await res.json() as { organic_results?: { title: string; snippet: string; link: string }[] };
+  return (data.organic_results || []).slice(0, maxResults).map(r => ({
+    title: r.title,
+    snippet: r.snippet,
+    url: r.link,
+  }));
+}
+
+async function exaSearch(query: string, maxResults: number, apiKey: string): Promise<WebResult[]> {
+  const res = await fetch('https://api.exa.ai/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+    body: JSON.stringify({
+      query,
+      numResults: maxResults,
+      type: 'auto',
+      contents: { highlights: true },
+    }),
+  });
+  if (!res.ok) throw new Error(`Exa HTTP ${res.status}`);
+  const data = await res.json() as {
+    results?: { title?: string; url?: string; highlights?: string[]; text?: string }[];
+  };
+  return (data.results || []).slice(0, maxResults).map(r => ({
+    title: r.title || r.url || '(untitled)',
+    snippet: r.highlights?.[0] || (r.text || '').slice(0, 300),
+    url: r.url || '',
+  }));
 }
 
 async function webSearchHandler(params: Record<string, unknown>, _context: ToolContext): Promise<unknown> {
   const query = params.query as string;
   const maxResults = (params.max_results as number) || 5;
-  const searchApiKey = resolveSearchApiKey();
 
+  // Backend chain: SerpAPI → Exa → mock. Each live backend falls through on error.
+  const searchApiKey = resolveSearchApiKey();
   if (searchApiKey) {
     try {
-      // Note: SerpAPI only supports api_key as URL query param (no Authorization header).
-      // The key appears in server access logs — restrict log access in production.
-      const url = `https://serpapi.com/search?api_key=${searchApiKey}&q=${encodeURIComponent(query)}&num=${maxResults}`;
-      const res = await fetch(url);
-      const data = await res.json() as { organic_results?: { title: string; snippet: string; link: string }[] };
-      return (data.organic_results || []).slice(0, maxResults).map(r => ({
-        title: r.title,
-        snippet: r.snippet,
-        url: r.link,
-      }));
+      return await serpSearch(query, maxResults, searchApiKey);
+    } catch {
+      // fall through to Exa / mock
+    }
+  }
+
+  const exaApiKey = resolveExaApiKey();
+  if (exaApiKey) {
+    try {
+      return await exaSearch(query, maxResults, exaApiKey);
     } catch {
       // fall through to mock
     }

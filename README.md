@@ -205,7 +205,10 @@ Built-in tools are registered on every `Agent` automatically. They provide reusa
 
 | Tool | Purpose | Parameters |
 |------|---------|------------|
-| `web_search` | SerpAPI web search | `query` (required), `max_results` (optional, default 5) |
+| `web_search` | Web search: SerpAPI → Exa → mock | `query` (required), `max_results` (optional, default 5) |
+| `firesearch_search` | Full-text search over your own Firesearch index | `index_path`, `query` (required), `limit`, `access_key` (optional) |
+| `firesearch_put_doc` | Add a document to your Firesearch index | `index_path`, `doc_id`, `text` (required), `fields` (optional) |
+| `firesearch_create_index` | Create a Firesearch full-text index | `index_path` (required), `name` (optional) |
 | `calculator` | Safe math evaluation | `expression` (required) — no `Function()` injection |
 | `current_time` | Current time in timezone | `timezone` (optional, default UTC) |
 
@@ -267,15 +270,31 @@ await provider.complete(messages, { tools, toolChoice: 'auto' })
 
 ### Builtin Tool Config
 
-`web_search` hits the live SerpAPI when a key is available, otherwise it
-returns clearly-mocked placeholder results. Inject the key at runtime
-(keystores, per-tenant keys, browsers) instead of relying on env:
+`web_search` tries live backends in order — SerpAPI (`SEARCH_API_KEY`),
+then Exa (`EXA_API_KEY`) — otherwise it returns clearly-mocked placeholder
+results. Inject keys at runtime (keystores, per-tenant keys, browsers)
+instead of relying on env:
 
 ```ts
 import { configureBuiltinTools, isSearchConfigured } from 'sure-gentic'
 
-configureBuiltinTools({ searchApiKey: decrypted }) // omitted/empty = clear to env fallback
-isSearchConfigured() // true when web_search would hit the live API
+configureBuiltinTools({ searchApiKey: decrypted, exaApiKey: exaKey }) // omitted/empty = clear to env fallback
+isSearchConfigured() // true when web_search would hit a live API
+```
+
+### Firesearch Tool Config
+
+`firesearch_*` tools talk to your own Firesearch instance (serverless
+full-text search over your indexes — not the web). Search runs with a 24h
+access key, auto-generated from the secret API key when you don't pass
+`access_key` explicitly. The secret key is backend-to-backend only
+(`X-API-Key` header — never expose it in browsers):
+
+```ts
+import { configureFiresearchTools, isFiresearchConfigured } from 'sure-gentic'
+
+configureFiresearchTools({ host, apiKey: secret }) // or FIRESEARCH_HOST / FIRESEARCH_API_KEY env
+isFiresearchConfigured() // true when a Firesearch host is set
 ```
 
 ## Streaming
@@ -301,6 +320,10 @@ await provider.completeStream(
 | `AI_MODEL` | provider default | Model override (e.g. `gpt-4o`, `claude-sonnet-4-20250514`) |
 | `AI_TEMPERATURE` | `0.7` | LLM temperature |
 | `SEARCH_API_KEY` | — | SerpAPI key for `web_search` tool (fallback when nothing injected via `configureBuiltinTools`) |
+| `EXA_API_KEY` | — | Exa key, second `web_search` backend after SerpAPI (or `exaApiKey` injection) |
+| `FIRESEARCH_HOST` | — | Firesearch instance host for `firesearch_*` tools (or `configureFiresearchTools`) |
+| `FIRESEARCH_API_KEY` | — | Firesearch secret key, backend-to-backend only (auto-generates 24h search access keys) |
+| `FIRESEARCH_ACCESS_KEY` | — | Pre-generated Firesearch search access key (skips auto-generation) |
 | `NODE_ENV` | — | When `test`, enables Mock provider |
 
 ## Import contract
@@ -326,8 +349,11 @@ surfacing at runtime.
 | `ToolRegistryService` | class (singleton) | Register and execute tools |
 | `validateParameters` | function | Validate params against a `ToolDefinition` |
 | `registerBuiltinTools` | function | Registers built-in tools (called in Agent constructor) |
-| `configureBuiltinTools` | function | Injects builtin tool config (`{ searchApiKey? }`) without env dependence |
-| `isSearchConfigured` | function | True when `web_search` would hit the live API |
+| `configureBuiltinTools` | function | Injects builtin tool config (`{ searchApiKey?, exaApiKey? }`) without env dependence |
+| `isSearchConfigured` | function | True when `web_search` would hit a live API |
+| `registerFiresearchTools` | function | Registers Firesearch tools (called in Agent constructor) |
+| `configureFiresearchTools` | function | Injects Firesearch config (`{ host?, apiKey?, accessKey? }`) without env dependence |
+| `isFiresearchConfigured` | function | True when `firesearch_*` tools have a host |
 | `FetchCompatibleProvider` | class | Zero-import fetch-only OpenAI-compatible provider (browsers, Thunderbird) |
 | `loadConfig` | function | Loads `SureGenticConfig` from env vars |
 
@@ -382,7 +408,8 @@ can use it.
 | `src/agent.ts` | `Agent` class — orchestrates providers, skills, and tools |
 | `src/skills/skill.ts` | `BaseSkill` abstract class — how to create new skills |
 | `src/tools/registry.ts` | `ToolRegistryService` — how tools are registered and executed |
-| `src/tools/builtin.ts` | Built-in tool examples (calculator, web_search, current_time) |
+| `src/tools/builtin.ts` | Built-in tools (calculator, web_search via SerpAPI/Exa, current_time) |
+| `src/tools/firesearch.ts` | Firesearch tools (search/put_doc/create_index over your own indexes) |
 | `src/providers/factory.ts` | `LLMProviderFactory` — how providers are discovered from env |
 
 ### Example: AI-generated agent workflow
