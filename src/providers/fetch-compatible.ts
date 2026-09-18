@@ -12,17 +12,20 @@ export class FetchCompatibleProvider implements LLMProvider {
   private baseURL: string;
   private apiKey: string;
   private defaultModel: string;
+  private timeoutMs: number;
 
   constructor(options?: {
     apiKey?: string;
     baseURL?: string;
     defaultModel?: string;
     label?: string;
+    timeoutMs?: number;
   }) {
     this.baseURL = (options?.baseURL || 'http://localhost:8080/v1').replace(/\/+$/, '');
     this.apiKey = options?.apiKey || 'not-needed';
     this.defaultModel = options?.defaultModel || 'gpt-4o';
     this.label = options?.label || 'fetch-compatible';
+    this.timeoutMs = options?.timeoutMs ?? 120000;
   }
 
   async complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
@@ -50,14 +53,27 @@ export class FetchCompatibleProvider implements LLMProvider {
         ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' }
         : {}),
     };
-    const resp = await fetch(`${this.baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
-      },
-      body: JSON.stringify(body),
-    });
+    const timeoutMs = options?.timeoutMs ?? this.timeoutMs;
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+    const timer = ctrl && timeoutMs > 0 ? setTimeout(() => ctrl.abort(), timeoutMs) : undefined;
+    let resp: Response;
+    try {
+      resp = await fetch(`${this.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+        },
+        body: JSON.stringify(body),
+        ...(ctrl ? { signal: ctrl.signal } : {}),
+      });
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError')
+        throw new Error(`LLM timeout after ${Math.round(timeoutMs / 1000)}s (${this.baseURL}/chat/completions)`, { cause: e });
+      throw e;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
     if (!resp.ok) throw new Error(`LLM HTTP ${resp.status}`);
     const data = (await resp.json()) as {
       choices?: { message?: { content?: string; tool_calls?: { id: string; function: { name: string; arguments: string } }[] }; finish_reason?: string }[];
@@ -96,16 +112,22 @@ export class FetchCompatibleProvider implements LLMProvider {
     );
   }
 
-  async getAvailableModels(): Promise<string[]> {
+  async getAvailableModels(timeoutMs?: number): Promise<string[]> {
+    const ms = timeoutMs ?? this.timeoutMs;
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+    const timer = ctrl && ms > 0 ? setTimeout(() => ctrl.abort(), ms) : undefined;
     try {
       const resp = await fetch(`${this.baseURL}/models`, {
         headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
+        ...(ctrl ? { signal: ctrl.signal } : {}),
       });
       if (!resp.ok) return [this.defaultModel];
       const data = (await resp.json()) as { data?: { id: string }[] };
       return data.data?.map((m) => m.id) || [this.defaultModel];
     } catch {
       return [this.defaultModel];
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 }

@@ -54,6 +54,9 @@ export interface CompletionOptions {
   stop?: string[];
   tools?: OpenAIFunctionTool[];
   toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+  /** Per-call fetch timeout override (ms). Honored by network providers
+   * (fetch-compatible, openai, openai-compatible, anthropic). Non-positive disables. */
+  timeoutMs?: number;
 }
 
 export interface CompletionUsage {

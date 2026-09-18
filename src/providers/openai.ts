@@ -52,6 +52,8 @@ export class OpenAIProvider implements LLMProvider {
   async complete(messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
     const c = await this.client();
     const model = options?.model || this.defaultModel;
+    const requestOptions =
+      options?.timeoutMs && options.timeoutMs > 0 ? { timeout: options.timeoutMs } : undefined;
     const response = await c.chat.completions.create({
       model,
       messages: toOpenAIMessages(messages),
@@ -62,7 +64,7 @@ export class OpenAIProvider implements LLMProvider {
       presence_penalty: options?.presencePenalty,
       stop: options?.stop,
       ...(options?.tools?.length ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' } : {}),
-    });
+    }, ...(requestOptions ? [requestOptions] : []));
     const choice = response.choices[0];
     const rawCalls = choice?.message?.tool_calls || [];
     return {

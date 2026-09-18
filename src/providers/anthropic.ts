@@ -27,13 +27,15 @@ export class AnthropicProvider implements LLMProvider {
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
 
+    const requestOptions =
+      options?.timeoutMs && options.timeoutMs > 0 ? { timeout: options.timeoutMs } : undefined;
     const response = await c.messages.create({
       model,
       system: systemMsg?.content,
       messages: chatMessages,
       max_tokens: options?.maxTokens || 4096,
       temperature: options?.temperature ?? 0.7,
-    });
+    }, ...(requestOptions ? [requestOptions] : []));
 
     return {
       content: response.content.map((b: any) => 'text' in b ? b.text : '').join(''),

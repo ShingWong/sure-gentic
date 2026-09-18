@@ -66,4 +66,57 @@ describe('tool loop', () => {
     const registry = ToolRegistryService.getInstance();
     expect(registry.listTools()).toHaveLength(registry.getAll().length);
   });
+
+  it('forces a no-tools closing answer when maxRounds exhausts', async () => {
+    const calls: (CompletionOptions | undefined)[] = [];
+    const looping = new (class implements LLMProvider {
+      readonly name = 'looping';
+      async complete(_messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
+        calls.push(options);
+        if ((options?.tools?.length ?? 0) > 0) {
+          return {
+            content: '',
+            toolCalls: [{ id: 'tc1', name: 'echo_tool', arguments: { text: 'hi' } }],
+            model: 'looping',
+          };
+        }
+        // Closing pass: must arrive with no tools attached.
+        return { content: 'closing answer', model: 'looping' };
+      }
+      async countTokens(): Promise<number> { return 0; }
+      async getAvailableModels(): Promise<string[]> { return ['looping']; }
+    })();
+    const agent = new Agent(looping);
+    const result = await agent.runToolLoop([{ role: 'user', content: 'x' }], { maxRounds: 1 });
+    expect(result.success).toBe(true);
+    expect(result.data).toBe('closing answer');
+    expect(calls.length).toBe(2);
+    expect(calls[1]?.tools).toBeUndefined();
+    expect(result.toolsUsed).toEqual(['echo_tool']);
+  });
+
+  it('falls back to the sentinel (with cause) when the closing pass fails', async () => {
+    const failing = new (class implements LLMProvider {
+      readonly name = 'failing-close';
+      calls = 0;
+      async complete(_messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
+        this.calls++;
+        if (options?.tools?.length) {
+          return {
+            content: '',
+            toolCalls: [{ id: 'tc1', name: 'echo_tool', arguments: { text: 'hi' } }],
+            model: 'failing-close',
+          };
+        }
+        throw new Error('closing boom');
+      }
+      async countTokens(): Promise<number> { return 0; }
+      async getAvailableModels(): Promise<string[]> { return ['failing-close']; }
+    })();
+    const agent = new Agent(failing);
+    const result = await agent.runToolLoop([{ role: 'user', content: 'x' }], { maxRounds: 1 });
+    expect(result.success).toBe(true);
+    expect(result.data).toBe('(agent hit max rounds without answering)');
+    expect(result.error).toContain('closing boom');
+  });
 });

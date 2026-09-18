@@ -46,6 +46,9 @@ export class Agent {
    * the model answers with text or maxRounds is hit. Non-breaking addition:
    * existing single-shot run() is untouched.
    *
+   * Budget: up to maxRounds tool rounds plus one final no-tools closing
+   * call if maxRounds exhausts without a text answer.
+   *
    * Returns the final text plus the names of tools that fired (for citation).
    */
   async runToolLoop(
@@ -94,7 +97,25 @@ export class Agent {
         }
         return { success: true, data: resp.content || '(empty answer)', toolsUsed };
       }
-      return { success: true, data: '(agent hit max rounds without answering)', toolsUsed };
+      // Out of rounds with no text answer: one final pass with NO
+      // tools forces the model to answer from everything gathered
+      // instead of dying on '(agent hit max rounds without answering)'.
+      // The closing call deliberately omits tools; any toolCalls it
+      // returns anyway are ignored in favor of its text content.
+      try {
+        const closing = await this.context.provider.complete(
+          [...convo,
+            { role: 'user',
+              content: 'Answer the original request now, using only the tool results above. Do not call any more tools.' },
+          ],
+          { model: this.context.model || undefined,
+            temperature: this.context.temperature },
+        );
+        return { success: true, data: closing.content || '(empty answer)', toolsUsed };
+      } catch (closeErr) {
+        const message = closeErr instanceof Error ? closeErr.message : String(closeErr);
+        return { success: true, data: '(agent hit max rounds without answering)', error: message, toolsUsed };
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const sanitized = message.replace(/(sk-[a-zA-Z0-9]{10,}|AIza[0-9A-Za-z_-]{35}|ant-api[0-9a-f]{32})/g, '[API KEY REDACTED]');
