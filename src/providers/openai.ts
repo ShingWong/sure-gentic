@@ -1,5 +1,6 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
 import { nodeEnv } from '../config.js';
+import { toOpenAIContent } from './multimodal.js';
 
 function safeParseArgs(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'string') return {};
@@ -16,7 +17,7 @@ function safeParseArgs(raw: unknown): Record<string, unknown> {
 function toOpenAIMessages(messages: Message[]): Record<string, unknown>[] {
   return messages.map((m) => ({
     role: m.role,
-    content: m.content,
+    content: toOpenAIContent(m.content),
     ...(m.toolCalls?.length
       ? {
           tool_calls: m.toolCalls.map((tc) => ({

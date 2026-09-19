@@ -1,4 +1,5 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse, ToolCall } from '../types.js';
+import { toOpenAIContent, messageText } from './multimodal.js';
 
 /**
  * Fetch-only OpenAI-compatible provider. Zero imports — no `openai` SDK,
@@ -34,7 +35,7 @@ export class FetchCompatibleProvider implements LLMProvider {
       model,
       messages: messages.map((m) => ({
         role: m.role,
-        content: m.content,
+        content: toOpenAIContent(m.content),
         ...(m.toolCalls?.length
           ? {
               tool_calls: m.toolCalls.map((tc) => ({
@@ -108,7 +109,7 @@ export class FetchCompatibleProvider implements LLMProvider {
 
   async countTokens(messages: Message[]): Promise<number> {
     return Math.ceil(
-      messages.reduce((s, m) => s + (typeof m.content === 'string' ? m.content.length : 200), 0) / 4,
+      messages.reduce((s, m) => s + messageText(m.content).length, 0) / 4,
     );
   }
 

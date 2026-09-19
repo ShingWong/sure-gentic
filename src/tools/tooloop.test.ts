@@ -174,4 +174,52 @@ describe('tool loop', () => {
     expect(provider.lastOptions?.tools ?? []).toEqual([]);
     expect(provider.lastOptions?.toolChoice).toBeUndefined();
   });
+
+  it('nudges past an empty mid-loop reply instead of returning it', async () => {
+    const seen: string[][] = [];
+    const gappy = new (class implements LLMProvider {
+      readonly name = 'gappy';
+      calls = 0;
+      async complete(messages: Message[], _options?: CompletionOptions): Promise<CompletionResponse> {
+        this.calls++;
+        seen.push(messages.map((m) => `${m.role}:${(m.content || '').slice(0, 40)}`));
+        if (this.calls === 1) return { content: '', model: 'gappy' };
+        return { content: 'recovered answer', model: 'gappy' };
+      }
+      async countTokens(): Promise<number> { return 0; }
+      async getAvailableModels(): Promise<string[]> { return ['gappy']; }
+    })();
+    const agent = new Agent(gappy);
+    const result = await agent.runToolLoop([{ role: 'user', content: 'x' }], { maxRounds: 3 });
+    expect(result.success).toBe(true);
+    expect(result.data).toBe('recovered answer');
+    expect(gappy.calls).toBe(2);
+    expect(seen[1].some((m) => m.includes('empty'))).toBe(true);
+  });
+
+  it('retries the closing pass once when it comes back empty', async () => {
+    const closing = new (class implements LLMProvider {
+      readonly name = 'empty-close';
+      closes = 0;
+      async complete(_messages: Message[], options?: CompletionOptions): Promise<CompletionResponse> {
+        if ((options?.tools?.length ?? 0) > 0) {
+          return {
+            content: '',
+            toolCalls: [{ id: 'tc1', name: 'echo_tool', arguments: { text: 'hi' } }],
+            model: 'empty-close',
+          };
+        }
+        this.closes++;
+        if (this.closes === 1) return { content: '  ', model: 'empty-close' };
+        return { content: 'second-try answer', model: 'empty-close' };
+      }
+      async countTokens(): Promise<number> { return 0; }
+      async getAvailableModels(): Promise<string[]> { return ['empty-close']; }
+    })();
+    const agent = new Agent(closing);
+    const result = await agent.runToolLoop([{ role: 'user', content: 'x' }], { maxRounds: 1 });
+    expect(result.success).toBe(true);
+    expect(result.data).toBe('second-try answer');
+    expect(closing.closes).toBe(2);
+  });
 });

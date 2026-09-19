@@ -103,30 +103,46 @@ export class Agent {
             }
             convo.push({
               role: 'tool',
-              content: String(result ?? '(empty)').slice(0, 6000),
+              content: (typeof result === 'string' ? result : JSON.stringify(result))?.slice(0, 6000) || '(empty)',
               toolCallId: tc.id,
               name: tc.name,
             });
           }
           continue;
         }
-        return { success: true, data: resp.content || '(empty answer)', toolsUsed };
+        if ((resp.content || '').trim()) {
+          return { success: true, data: resp.content, toolsUsed };
+        }
+        // Empty reply with no tool calls: do not present "(empty answer)"
+        // as final — nudge once and keep going inside the round budget.
+        convo.push({
+          role: 'user',
+          content: 'Your reply was empty. Answer with text, or call a tool and then answer.',
+        });
+        continue;
       }
       // Out of rounds with no text answer: one final pass with NO
       // tools forces the model to answer from everything gathered
       // instead of dying on '(agent hit max rounds without answering)'.
       // The closing call deliberately omits tools; any toolCalls it
       // returns anyway are ignored in favor of its text content.
+      const closeWith = async (extra: string) => this.context.provider.complete(
+        [...convo,
+          { role: 'user', content: extra },
+        ],
+        { model: this.context.model || undefined,
+          temperature: this.context.temperature },
+      );
       try {
-        const closing = await this.context.provider.complete(
-          [...convo,
-            { role: 'user',
-              content: 'Answer the original request now, using only the tool results above. Do not call any more tools.' },
-          ],
-          { model: this.context.model || undefined,
-            temperature: this.context.temperature },
-        );
-        return { success: true, data: closing.content || '(empty answer)', toolsUsed };
+        let closing = await closeWith(
+          'Answer the original request now, using only the tool results above. Do not call any more tools.');
+        if (!(closing.content || '').trim()) {
+          closing = await closeWith(
+            'You must respond with text now. Summarize what the tool results show, even if incomplete.');
+        }
+        const text = (closing.content || '').trim();
+        if (text) return { success: true, data: text, toolsUsed };
+        return { success: true, data: '(no answer — the model returned nothing; try resending the question)', toolsUsed };
       } catch (closeErr) {
         const message = closeErr instanceof Error ? closeErr.message : String(closeErr);
         return { success: true, data: '(agent hit max rounds without answering)', error: message, toolsUsed };

@@ -75,8 +75,9 @@ async function webSearchHandler(params: Record<string, unknown>, _context: ToolC
   if (searchApiKey) {
     try {
       return await serpSearch(query, maxResults, searchApiKey);
-    } catch {
-      // fall through to Exa / mock
+    } catch (err) {
+      // fall through to Exa / mock (warn so silent mock results are debuggable)
+      if (typeof console !== 'undefined') console.warn('[web_search] SerpAPI failed, trying Exa/mock:', err instanceof Error ? err.message : err);
     }
   }
 
@@ -84,8 +85,9 @@ async function webSearchHandler(params: Record<string, unknown>, _context: ToolC
   if (exaApiKey) {
     try {
       return await exaSearch(query, maxResults, exaApiKey);
-    } catch {
+    } catch (err) {
       // fall through to mock
+      if (typeof console !== 'undefined') console.warn('[web_search] Exa failed, using mock results:', err instanceof Error ? err.message : err);
     }
   }
 

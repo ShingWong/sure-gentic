@@ -30,6 +30,8 @@ describe('firesearch tools', () => {
   it('isFiresearchConfigured reflects host config', () => {
     expect(isFiresearchConfigured()).toBe(false);
     process.env.FIRESEARCH_HOST = 'https://fs.test/';
+    expect(isFiresearchConfigured()).toBe(false); // host alone is not searchable
+    process.env.FIRESEARCH_API_KEY = 'secret';
     expect(isFiresearchConfigured()).toBe(true);
   });
 

@@ -163,9 +163,35 @@ tool calls for non-offered tools are refused without executing (and are
 not recorded in `toolsUsed`). Direct `registry.execute()` calls are
 unaffected — the allowlist only governs the loop.
 
-Requires a tool-capable provider (`openai`, `openai-compatible`, or
-`fetch-compatible`). Tools resolve by id first, then by name — the LLM only
-ever sees names.
+### Multimodal messages
+
+`Message.content` accepts `string | ContentPart[]` (`text`, `image_url`,
+`file`). Each provider serializes parts to its native wire shape
+(`src/providers/multimodal.ts` — pure functions, unit-tested):
+
+| Part | OpenAI / OpenRouter / compatible | Anthropic | Google (AIStudio / Vertex) |
+|------|----------------------------------|-----------|----------------------------|
+| `text` | native | native | native |
+| `image_url` (data:) | native | native image block | `inlineData` |
+| `image_url` (https:) | native | native url source | `fileData` |
+| `file` pdf | `input_file` (`file_data`) | document block | `inlineData` |
+| `file` text/* | inlined as text | inlined as text | `inlineData` |
+| `file` other (xlsx, docx…) | placeholder note | placeholder note | `inlineData` |
+
+```ts
+await agent.runToolLoop([
+  { role: 'user', content: [
+    { type: 'text', text: 'What is in this image?' },
+    { type: 'image_url', image_url: { url: 'data:image/png;base64,...' } },
+    { type: 'file', file: { data: '<base64>', mimeType: 'application/pdf', name: 'a.pdf' } },
+  ] },
+])
+```
+
+Requires a tool-capable provider (`openai`, `openai-compatible`,
+`fetch-compatible`, or `openrouter`). `mock` demonstrates the loop with
+heuristic tool calls (no API key). Tools resolve by id first, then by name
+— the LLM only ever sees names.
 
 ## Skills
 

@@ -45,9 +45,9 @@ export function configureFiresearchTools(opts?: { host?: string; apiKey?: string
   configuredAccessKey = opts?.accessKey || undefined;
 }
 
-/** True when firesearch_* tools have a host to talk to. */
+/** True when firesearch_* tools can actually search (host + a credential). */
 export function isFiresearchConfigured(): boolean {
-  return !!resolveHost();
+  return !!resolveHost() && (!!resolveApiKey() || !!resolveAccessKey());
 }
 
 function requireHost(): string {

@@ -1,5 +1,6 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js';
 import { nodeEnv } from '../config.js';
+import { toAnthropicBlocks, messageText } from './multimodal.js';
 
 export class AnthropicProvider implements LLMProvider {
   readonly name = 'anthropic';
@@ -25,13 +26,13 @@ export class AnthropicProvider implements LLMProvider {
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages
       .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
+      .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: toAnthropicBlocks(m.content) }));
 
     const requestOptions =
       options?.timeoutMs && options.timeoutMs > 0 ? { timeout: options.timeoutMs } : undefined;
     const response = await c.messages.create({
       model,
-      system: systemMsg?.content,
+      system: systemMsg ? messageText(systemMsg.content) : undefined,
       messages: chatMessages,
       max_tokens: options?.maxTokens || 4096,
       temperature: options?.temperature ?? 0.7,
@@ -60,11 +61,11 @@ export class AnthropicProvider implements LLMProvider {
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages
       .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
+      .map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: toAnthropicBlocks(m.content) }));
 
     const stream = await c.messages.create({
       model,
-      system: systemMsg?.content,
+      system: systemMsg ? messageText(systemMsg.content) : undefined,
       messages: chatMessages,
       max_tokens: options?.maxTokens || 4096,
       temperature: options?.temperature ?? 0.7,

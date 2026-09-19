@@ -1,7 +1,38 @@
 import type { LLMProvider, Message, CompletionOptions, CompletionResponse } from '../types.js'
 import { nodeEnv } from '../config.js'
+import { toOpenAIContent } from './multimodal.js'
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+
+function toWireMessages(messages: Message[]): Record<string, unknown>[] {
+  return messages.map((m) => ({
+    role: m.role,
+    content: toOpenAIContent(m.content),
+    ...(m.toolCalls?.length
+      ? {
+          tool_calls: m.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.name, arguments: JSON.stringify(tc.arguments || {}) },
+          })),
+        }
+      : {}),
+    ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+    ...(m.name ? { name: m.name } : {}),
+  }))
+}
+
+function safeParseArgs(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'string') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
 
 function headers(key: string) {
   return {
@@ -30,11 +61,12 @@ export class OpenRouterProvider implements LLMProvider {
       method: 'POST',
       headers: headers(this.apiKey),
       body: JSON.stringify({
-        model, messages,
+        model, messages: toWireMessages(messages),
         temperature: options?.temperature ?? 0.7,
         max_tokens: options?.maxTokens,
         top_p: options?.topP,
         stop: options?.stop,
+        ...(options?.tools?.length ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' } : {}),
       }),
     })
     if (!res.ok) {
@@ -43,12 +75,18 @@ export class OpenRouterProvider implements LLMProvider {
     }
     const data = await res.json()
     const choice = data.choices?.[0]
+    const rawCalls = choice?.message?.tool_calls || []
     return {
       content: choice?.message?.content || '',
       model: data.model || model,
       usage: data.usage ? { promptTokens: data.usage.prompt_tokens || 0, completionTokens: data.usage.completion_tokens || 0, totalTokens: data.usage.total_tokens || 0 } : undefined,
       finishReason: choice?.finish_reason,
       id: data.id,
+      toolCalls: rawCalls.map((tc: any) => ({
+        id: tc.id || `call_${Math.random().toString(36).slice(2)}`,
+        name: tc.function?.name || '',
+        arguments: safeParseArgs(tc.function?.arguments),
+      })),
     }
   }
 
@@ -58,7 +96,7 @@ export class OpenRouterProvider implements LLMProvider {
     const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: { ...headers(this.apiKey), Accept: 'text/event-stream' },
-      body: JSON.stringify({ model, messages, stream: true, temperature: options?.temperature ?? 0.7, max_tokens: options?.maxTokens }),
+      body: JSON.stringify({ model, messages: toWireMessages(messages), stream: true, temperature: options?.temperature ?? 0.7, max_tokens: options?.maxTokens, ...(options?.tools?.length ? { tools: options.tools, tool_choice: options.toolChoice || 'auto' } : {}) }),
     })
     if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error(`OpenRouter ${res.status}: ${t || res.statusText}`) }
     let fullContent = ''
