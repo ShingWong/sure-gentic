@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Provider-agnostic AI agent framework with skill-based architecture",
   "type": "module",
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
   "exports": {

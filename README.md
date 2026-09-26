@@ -3,7 +3,7 @@
 **A portable agent creation framework.** Build AI agents with composable **skills** and pluggable **tools**, then run them against OpenAI, Anthropic, or any LLM backend — swap providers with a single environment variable, no code changes, no lock-in.
 
 ```ts
-import { Agent, BaseSkill } from 'sure-gentic'
+import { Agent, BaseSkill } from '@shing.wong/sure-gentic'
 
 class Summarizer extends BaseSkill<string, string> {
   name = 'summarizer'
@@ -46,7 +46,7 @@ const result = await agent.run(new Summarizer(), 'Long text here...')
 ## Installation
 
 ```bash
-npm install sure-gentic
+npm install @shing.wong/sure-gentic
 ```
 
 Peer dependencies (install the providers you need):
@@ -75,7 +75,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 (Qwen, vLLM, llama.cpp). Two providers, same options shape — pick by runtime:
 
 ```ts
-import { OpenAICompatibleProvider, FetchCompatibleProvider } from 'sure-gentic'
+import { OpenAICompatibleProvider, FetchCompatibleProvider } from '@shing.wong/sure-gentic'
 
 // Node (uses the openai SDK under the hood):
 const node = new OpenAICompatibleProvider({
@@ -198,7 +198,7 @@ heuristic tool calls (no API key). Tools resolve by id first, then by name
 Skills encapsulate LLM-powered tasks. Extend `BaseSkill<TContext, TResult>` with `name`, `description`, and `execute()`:
 
 ```ts
-import { BaseSkill } from 'sure-gentic'
+import { BaseSkill } from '@shing.wong/sure-gentic'
 
 class Translator extends BaseSkill<{ text: string; lang: string }, string> {
   name = 'translator'
@@ -241,7 +241,7 @@ Built-in tools are registered on every `Agent` automatically. They provide reusa
 ### Custom Tools
 
 ```ts
-import { ToolRegistryService, type ToolDefinition, type ToolHandler } from 'sure-gentic'
+import { ToolRegistryService, type ToolDefinition, type ToolHandler } from '@shing.wong/sure-gentic'
 
 const weatherDef: ToolDefinition = {
   id: 'get_weather',
@@ -285,7 +285,7 @@ Export the registry in OpenAI function-calling format and pass it to any
 tool-capable provider via `CompletionOptions.tools`:
 
 ```ts
-import { ToolRegistryService } from 'sure-gentic'
+import { ToolRegistryService } from '@shing.wong/sure-gentic'
 
 const tools = ToolRegistryService.getInstance().getOpenAITools()
 // → [{ type: 'function', function: { name, description, parameters } }]
@@ -302,7 +302,7 @@ results. Inject keys at runtime (keystores, per-tenant keys, browsers)
 instead of relying on env:
 
 ```ts
-import { configureBuiltinTools, isSearchConfigured } from 'sure-gentic'
+import { configureBuiltinTools, isSearchConfigured } from '@shing.wong/sure-gentic'
 
 configureBuiltinTools({ searchApiKey: decrypted, exaApiKey: exaKey }) // omitted/empty = clear to env fallback
 isSearchConfigured() // true when web_search would hit a live API
@@ -317,7 +317,7 @@ access key, auto-generated from the secret API key when you don't pass
 (`X-API-Key` header — never expose it in browsers):
 
 ```ts
-import { configureFiresearchTools, isFiresearchConfigured } from 'sure-gentic'
+import { configureFiresearchTools, isFiresearchConfigured } from '@shing.wong/sure-gentic'
 
 configureFiresearchTools({ host, apiKey: secret }) // or FIRESEARCH_HOST / FIRESEARCH_API_KEY env
 isFiresearchConfigured() // true when a Firesearch host is set
