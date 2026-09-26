@@ -1,5 +1,5 @@
 {
-  "name": "sure-gentic",
+  "name": "@shing.wong/sure-gentic",
   "version": "0.1.0",
   "description": "Provider-agnostic AI agent framework with skill-based architecture",
   "type": "module",
@@ -41,5 +41,8 @@
     "typescript": "^5.5.0",
     "vitest": "^1.6.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }
