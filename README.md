@@ -54,8 +54,12 @@ Peer dependencies (install the providers you need):
 ```bash
 npm install openai                          # OpenAI provider
 npm install @anthropic-ai/sdk               # Anthropic provider
-# Google provider coming soon
+npm install @google/generative-ai           # Google AIStudio and Vertex
 ```
+
+`openai-compatible` (any OpenAI-shaped endpoint) and `openrouter` providers need
+no extra dependency. All peer dependencies are optional: install only the
+providers you intend to use.
 
 ## Provider Setup
 
