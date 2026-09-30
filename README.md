@@ -61,6 +61,17 @@ npm install @google/generative-ai           # Google AIStudio and Vertex
 no extra dependency. All peer dependencies are optional: install only the
 providers you intend to use.
 
+Supported versions:
+
+| Provider | Accepted range |
+|----------|----------------|
+| `openai` | `^4` \|\| `^5` \|\| `^6` |
+| `@anthropic-ai/sdk` | `^0.30` \|\| `^0.78` |
+| `@google/generative-ai` | `^0.24` |
+
+Each SDK is imported lazily, so a provider you do not install is never loaded
+and never fails.
+
 ## Provider Setup
 
 **OpenAI** — set `OPENAI_API_KEY` env var:
