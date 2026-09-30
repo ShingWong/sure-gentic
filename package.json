@@ -48,5 +48,13 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShingWong/sure-gentic.git"
+  },
+  "homepage": "https://github.com/ShingWong/sure-gentic#readme",
+  "bugs": {
+    "url": "https://github.com/ShingWong/sure-gentic/issues"
   }
 }
