@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref; keep main green at every commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck, build, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          # Node 20 is the floor implied by ES2022 + nodenext resolution and
+          # the engines of vitest (^18 || >=20).
+          node-version: 20
+          cache: npm
+
+      # npm ci, not npm install: this is what verifies the committed lockfile
+      # is actually reproducible.
+      - name: Install
+        run: npm ci
+
+      # This package has no lint script; `typecheck` is its equivalent gate.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Also builds the CJS and NodeNext outputs and runs the smoke scripts
+      # under scripts/smoke, so a broken import or renamed tool name fails here
+      # rather than at publish time.
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      # Fails the build if tsc ever emits a test artifact into dist again.
+      - name: Verify dist has no test artifacts
+        run: |
+          if find dist -name '*.test.*' | grep -q .; then
+            echo "::error::test artifacts found in dist"
+            find dist -name '*.test.*' -print
+            exit 1
+          fi
+          echo "dist is clean"
+
+      # The publish job is gated on typecheck, build and test, so a regression
+      # there blocks a release. This is where it is caught instead.
+      - name: Upload build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
