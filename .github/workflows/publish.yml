@@ -1,0 +1,132 @@
+name: Publish
+
+# Stages a release when the version in package.json changes on main.
+#
+# This never publishes directly and never approves. It submits the package to
+# npm's staging area; a maintainer must then review it and approve with 2FA at
+# https://www.npmjs.com → Staged Packages. npm requires that step for staged
+# publishing even when the submission comes from a trusted publisher, so the
+# human gate is the point, not an obstacle.
+#
+# Authentication uses OIDC trusted publishing, so no npm token is stored in
+# this repository.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+
+# Matches npm's documented trusted-publisher example. Notably id-token: write
+# lives at the workflow level, and caching is disabled because npm rewrites
+# _authToken during a release and a restored cache can pin a stale one.
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    name: stage for release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history so the previous version can be read from the parent
+          # commit; fetch-depth 1 would not include it.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          # npm's docs: never use caching in release builds.
+          package-manager-cache: false
+
+      # `npm stage publish` requires npm >= 11.15.0, but actions/setup-node does
+      # not install the npm bundled with the Node release — it uses the
+      # runner's own npm, which is 10.x. Without this the step fails with:
+      #   Unknown command: "stage"
+      - name: Ensure npm supports staged publishing
+        run: |
+          npm --version
+          if ! npm stage --help >/dev/null 2>&1; then
+            echo "::notice::upgrading npm to 11 (runner ships 10.x, which predates npm stage)"
+            npm install -g 'npm@11'
+          fi
+          echo "npm now: $(npm --version)"
+          npm stage --help >/dev/null 2>&1 || { echo "::error::npm still lacks 'stage'"; exit 1; }
+
+      - name: Detect version change
+        id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          current=$(node -p "require('./package.json').version")
+          previous=$(git show "${BEFORE_SHA}:package.json" 2>/dev/null \
+            | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version" 2>/dev/null || echo "")
+          echo "previous=${previous:-none}" >> "$GITHUB_OUTPUT"
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+          if [ -z "${previous:-}" ] || [ "$previous" != "$current" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version changed: ${previous:-none} -> ${current}"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "version unchanged at ${current}; nothing to stage"
+          fi
+
+      - name: Install
+        if: steps.detect.outputs.changed == 'true'
+        run: npm ci
+
+      # This package has no lint script; `typecheck` is its equivalent gate.
+      - name: Typecheck
+        if: steps.detect.outputs.changed == 'true'
+        run: npm run typecheck
+
+      # Also builds the CJS and NodeNext outputs and runs the smoke scripts
+      # under scripts/smoke, so a broken import or renamed tool name fails here
+      # rather than at publish time.
+      - name: Build
+        if: steps.detect.outputs.changed == 'true'
+        run: npm run build
+
+      - name: Test
+        if: steps.detect.outputs.changed == 'true'
+        run: npm test
+
+      # Fails the job if tsc ever emits a test artifact into dist again.
+      - name: Verify dist has no test artifacts
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          if find dist -name '*.test.*' | grep -q .; then
+            echo "::error::test artifacts found in dist"
+            find dist -name '*.test.*' -print
+            exit 1
+          fi
+          echo "dist is clean"
+
+      # The package must already exist on the registry; npm cannot stage a
+      # brand-new package, so a first release still needs a local publish with
+      # a 2FA-protected token.
+      - name: Stage for publishing
+        if: steps.detect.outputs.changed == 'true'
+        run: npm stage publish
+
+      - name: Summary
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          echo "::notice title=Staged for release::\
+          $(node -p "require('./package.json').name")@${{ steps.detect.outputs.current }} is staged. \
+          Approve it at https://www.npmjs.com (Staged Packages tab) with 2FA. \
+          Staged packages expire, so approve before the deadline."
+
+      - name: Nothing to do
+        if: steps.detect.outputs.changed == 'false'
+        run: echo "package.json version did not change; skipping the release."
