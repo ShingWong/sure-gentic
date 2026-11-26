@@ -94,11 +94,11 @@ import { OpenAICompatibleProvider, FetchCompatibleProvider } from '@shing.wong/s
 
 // Node (uses the openai SDK under the hood):
 const node = new OpenAICompatibleProvider({
-  baseURL: 'http://192.168.11.249:8080/v1', defaultModel: 'qwen3:32b',
+  baseURL: 'http://127.0.0.1:8080/v1', defaultModel: 'qwen3:32b',
 })
 // Browser / Thunderbird extension (zero imports, fetch only):
 const browser = new FetchCompatibleProvider({
-  baseURL: 'http://192.168.11.249:8080/v1', defaultModel: 'qwen3:32b',
+  baseURL: 'http://127.0.0.1:8080/v1', defaultModel: 'qwen3:32b',
 })
 ```
 
@@ -468,7 +468,7 @@ git clone git@github.com:ShingWong/sure-gentic.git
 cd sure-gentic
 npm install
 npm run build
-npm test           # 24 tests (tool loop, registry, builtin)
+npm test           # 46 tests (tool loop, registry, builtin)
 node scripts/smoke/node-import.mjs  # plain-Node ESM import + schema check
 node scripts/smoke/tool-name.mjs    # registry name-lookup check
 npm run typecheck  # tsc --noEmit
