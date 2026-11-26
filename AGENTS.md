@@ -57,7 +57,7 @@ Returns `{ success, data, toolsUsed }`.
 
 ```bash
 npm run build     # tsc (ESM + CJS + NodeNext smoke)
-npm test          # vitest (15 tests, incl. tool-loop and registry suites)
+npm test          # vitest (46 tests, incl. tool-loop and registry suites)
 npm run typecheck # tsc --noEmit
 ```
 
